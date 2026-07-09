@@ -50,6 +50,8 @@ spec:
           port: 5353
     - ports:
         - protocol: TCP
+          port: 80
+        - protocol: TCP
           port: 443
     - to:
         - namespaceSelector:
