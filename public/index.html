@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Planes de preparación · oposicionesdeporte.com</title>
+<style>
+  :root { --cyan:#16A6D9; --navy:#0E3A4F; --ink:#1F2933; --grey:#6B7682; --line:#E3E8EC; --soft:#F2F8FB; }
+  * { box-sizing: border-box; }
+  body { font-family: Calibri, "Segoe UI", system-ui, sans-serif; color: var(--ink); margin:0; background:#fff; }
+  header { display:flex; align-items:center; justify-content:space-between; padding:18px 28px; border-bottom:1px solid var(--line); }
+  header .brand { font-weight:700; color:var(--navy); font-size:20px; }
+  header .brand span { color:var(--cyan); }
+  main { max-width:820px; margin:0 auto; padding:32px 24px 80px; }
+  h1 { color:var(--navy); font-size:26px; margin:0 0 6px; }
+  .sub { color:var(--grey); margin:0 0 28px; }
+  label { display:block; font-weight:700; color:var(--navy); margin:22px 0 8px; }
+  textarea, input[type=text] { width:100%; border:1px solid var(--line); border-radius:8px; padding:12px 14px; font-size:15px; font-family:inherit; }
+  textarea { min-height:180px; resize:vertical; }
+  .hint { color:var(--grey); font-size:13px; margin-top:6px; }
+  .row { display:flex; gap:16px; flex-wrap:wrap; align-items:center; }
+  .modo { display:flex; gap:10px; margin-top:8px; }
+  .modo button { flex:1; padding:12px; border:1px solid var(--line); background:#fff; border-radius:8px; cursor:pointer; font-weight:600; color:var(--grey); }
+  .modo button.active { border-color:var(--cyan); color:var(--navy); background:var(--soft); }
+  .cta { margin-top:28px; }
+  .cta button { background:var(--cyan); color:#fff; border:0; border-radius:8px; padding:14px 28px; font-size:16px; font-weight:700; cursor:pointer; }
+  .cta button:disabled { opacity:.5; cursor:not-allowed; }
+  #result { margin-top:28px; padding:20px; border:1px solid var(--line); border-radius:10px; background:var(--soft); display:none; }
+  #result.show { display:block; }
+  #result a { color:var(--cyan); font-weight:700; }
+  .avisos { color:#8a6d00; font-size:14px; margin-top:10px; }
+  .err { color:#b00020; }
+  .spinner { display:none; margin-top:20px; color:var(--grey); }
+  .spinner.show { display:block; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">oposiciones<span>deporte</span> · Planes</div>
+  <button onclick="logout()" style="border:0;background:none;color:var(--grey);cursor:pointer;">Salir</button>
+</header>
+<main>
+  <h1>Generar plan de preparación</h1>
+  <p class="sub">Pega el texto del boletín (o sube el .txt), añade observaciones y elige el modo. La app clasifica el proceso y genera el .docx con la identidad de la marca.</p>
+
+  <label>Texto del boletín oficial</label>
+  <textarea id="boletin" placeholder="Pega aquí el texto íntegro de la convocatoria (BOE, BOP, DOG, DOGV...)"></textarea>
+  <div class="hint">O sube un archivo .txt: <input type="file" id="file" accept=".txt,text/plain" /></div>
+
+  <label>Observaciones del proceso (particularidades a tener en cuenta)</label>
+  <textarea id="obs" style="min-height:100px" placeholder="Ej.: el práctico incluye lectura pública; la entrevista es eliminatoria; hay bolsa de 2 años; etc."></textarea>
+
+  <label>Modo del plan</label>
+  <div class="modo">
+    <button type="button" class="active" data-modo="decision" onclick="setModo(this)">Decisión (ya conoce el centro)</button>
+    <button type="button" data-modo="captacion" onclick="setModo(this)">Captación (marketing AIDA)</button>
+  </div>
+
+  <div class="cta">
+    <button id="go" onclick="generar()">Generar plan</button>
+  </div>
+
+  <div class="spinner" id="spin">Analizando el boletín y generando el documento… (puede tardar ~30-60 s)</div>
+
+  <div id="result"></div>
+</main>
+
+<script>
+let modo = "decision";
+function setModo(btn){ modo = btn.dataset.modo; document.querySelectorAll(".modo button").forEach(b=>b.classList.remove("active")); btn.classList.add("active"); }
+async function logout(){ await fetch("/api/logout",{method:"POST"}); location.href="/login.html"; }
+
+async function generar(){
+  const boletin = document.getElementById("boletin").value.trim();
+  const obs = document.getElementById("obs").value.trim();
+  const file = document.getElementById("file").files[0];
+  const res = document.getElementById("result");
+  const go = document.getElementById("go");
+  const spin = document.getElementById("spin");
+  res.className = ""; res.innerHTML = "";
+  if (!boletin && !file){ res.className="show"; res.innerHTML='<span class="err">Pega el boletín o sube un .txt.</span>'; return; }
+  go.disabled = true; spin.className="spinner show";
+
+  try {
+    const fd = new FormData();
+    if (file) fd.append("boletinFile", file); else fd.append("boletinTxt", boletin);
+    fd.append("observaciones", obs);
+    fd.append("modo", modo);
+    const r = await fetch("/api/generar", { method:"POST", body: fd });
+    const data = await r.json();
+    spin.className="spinner"; go.disabled=false; res.className="show";
+    if (!r.ok){
+      res.innerHTML = '<span class="err"><b>No se pudo generar:</b> '+(data.error||"error")+'</span>'
+        + (data.detalles? '<div class="avisos">'+data.detalles.join("<br>")+'</div>':"");
+      return;
+    }
+    let html = '<b>Plan generado:</b> '+data.resumen.plaza+' (caso '+data.resumen.caso+')<br><br>';
+    html += '📄 <a href="/api/download/'+data.docx+'">Descargar Word (.docx)</a>';
+    if (data.pdf) html += ' &nbsp;·&nbsp; 👁️ <a href="/api/download/'+data.pdf+'" target="_blank">Ver PDF</a>';
+    if (data.resumen.faltantes?.length) html += '<div class="avisos"><b>Datos a confirmar:</b><br>'+data.resumen.faltantes.join("<br>")+'</div>';
+    if (data.avisos?.length) html += '<div class="avisos"><b>Avisos:</b><br>'+data.avisos.join("<br>")+'</div>';
+    res.innerHTML = html;
+  } catch(e){
+    spin.className="spinner"; go.disabled=false; res.className="show";
+    res.innerHTML = '<span class="err">Error de red: '+e.message+'</span>';
+  }
+}
+</script>
+</body>
+</html>

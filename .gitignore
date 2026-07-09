@@ -1,0 +1,10 @@
+node_modules/
+.env
+uploads/*
+outputs/*
+!uploads/.gitkeep
+!outputs/.gitkeep
+# assets generados en setup (se regeneran):
+src/_common.js
+src/*.png
+src/icons/

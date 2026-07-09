@@ -1,0 +1,44 @@
+# docker-compose.yml — Despliegue completo: la app + Caddy (HTTPS automático).
+#
+# Caddy actúa de reverse proxy delante de la app: expone 80/443 al mundo, saca
+# el certificado TLS de Let's Encrypt solo (sin pasos manuales) y reenvía el
+# tráfico a la app, que NO se expone directamente a internet.
+#
+# Uso:
+#   1) Rellena .env (ANTHROPIC_API_KEY, APP_USERS, SESSION_SECRET)
+#   2) Pon tu dominio en la variable DOMINIO del .env (p.ej. planes.tudominio.com)
+#   3) docker compose up -d --build
+#
+# Requisito: el (sub)dominio debe apuntar (registro A) a la IP del servidor
+# ANTES de arrancar, o Caddy no podrá emitir el certificado.
+
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    # NO publicamos puertos al host: solo Caddy habla con la app por la red interna.
+    expose:
+      - "3000"
+    volumes:
+      # Persistimos los .docx/.pdf generados fuera del contenedor (opcional).
+      - ./outputs:/app/outputs
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMINIO=${DOMINIO}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
+volumes:
+  caddy_data:
+  caddy_config:

@@ -1,0 +1,57 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: creaplanesopo-backup
+  namespace: creaplanesopo
+  labels:
+    app.kubernetes.io/name: creaplanesopo
+spec:
+  schedule: "35 3 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: creaplanesopo
+            app.kubernetes.io/component: backup
+        spec:
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: backup
+              image: image-registry.openshift-image-registry.svc:5000/creaplanesopo/creaplanesopo:latest
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -eu
+                  ts="$(date -u +%Y%m%dT%H%M%SZ)"
+                  mkdir -p /backups
+                  tar -czf "/backups/creaplanesopo-outputs-${ts}.tar.gz" -C /outputs .
+                  find /backups -name 'creaplanesopo-outputs-*.tar.gz' -type f -mtime +14 -delete
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                    - ALL
+                readOnlyRootFilesystem: true
+              volumeMounts:
+                - name: outputs
+                  mountPath: /outputs
+                  readOnly: true
+                - name: backups
+                  mountPath: /backups
+          volumes:
+            - name: outputs
+              persistentVolumeClaim:
+                claimName: creaplanesopo-outputs
+            - name: backups
+              persistentVolumeClaim:
+                claimName: creaplanesopo-backups

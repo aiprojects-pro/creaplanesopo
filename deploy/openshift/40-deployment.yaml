@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: creaplanesopo
+  namespace: creaplanesopo
+  labels:
+    app.kubernetes.io/name: creaplanesopo
+    app.kubernetes.io/component: web
+  annotations:
+    image.openshift.io/triggers: >-
+      [{"from":{"kind":"ImageStreamTag","name":"creaplanesopo:latest"},"fieldPath":"spec.template.spec.containers[?(@.name==\"app\")].image"}]
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: creaplanesopo
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: creaplanesopo
+        app.kubernetes.io/component: web
+      annotations:
+        image.openshift.io/triggers: >-
+          [{"from":{"kind":"ImageStreamTag","name":"creaplanesopo:latest","namespace":"creaplanesopo"},"fieldPath":"spec.template.spec.containers[?(@.name==\"app\")].image"}]
+    spec:
+      containers:
+        - name: app
+          image: image-registry.openshift-image-registry.svc:5000/creaplanesopo/creaplanesopo:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 3000
+          envFrom:
+            - secretRef:
+                name: creaplanesopo-config
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 10
+            timeoutSeconds: 3
+            periodSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 45
+            timeoutSeconds: 5
+            periodSeconds: 30
+            failureThreshold: 3
+          volumeMounts:
+            - name: outputs
+              mountPath: /app/outputs
+            - name: uploads
+              mountPath: /app/uploads
+      volumes:
+        - name: outputs
+          persistentVolumeClaim:
+            claimName: creaplanesopo-outputs
+        - name: uploads
+          emptyDir: {}

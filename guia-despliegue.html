@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Despliegue planes-app · Guía para el administrador</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --panel: #f2f8fb;
+    --panel-2: #e7f2f7;
+    --text: #1f2933;
+    --muted: #566470;
+    --faint: #8493a0;
+    --border: #dce6eb;
+    --heading: #0e3a4f;
+    --accent: #16a6d9;
+    --accent-strong: #0c6e93;
+    --term-bg: #0e2a38;
+    --term-text: #dceef7;
+    --term-accent: #6fd0f0;
+    --term-muted: #7fa6b8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0a1c25; --panel: #102a36; --panel-2: #16333f; --text: #e7eff3;
+      --muted: #a2b4be; --faint: #6e828e; --border: #21424f; --heading: #bbe3f2;
+      --accent: #34b4e0; --accent-strong: #7bd3f1; --term-bg: #06161e;
+      --term-text: #d2e9f3; --term-accent: #6fd0f0; --term-muted: #6f93a4;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #ffffff; --panel: #f2f8fb; --panel-2: #e7f2f7; --text: #1f2933;
+    --muted: #566470; --faint: #8493a0; --border: #dce6eb; --heading: #0e3a4f;
+    --accent: #16a6d9; --accent-strong: #0c6e93; --term-bg: #0e2a38;
+    --term-text: #dceef7; --term-accent: #6fd0f0; --term-muted: #7fa6b8;
+  }
+  :root[data-theme="dark"] {
+    --bg: #0a1c25; --panel: #102a36; --panel-2: #16333f; --text: #e7eff3;
+    --muted: #a2b4be; --faint: #6e828e; --border: #21424f; --heading: #bbe3f2;
+    --accent: #34b4e0; --accent-strong: #7bd3f1; --term-bg: #06161e;
+    --term-text: #d2e9f3; --term-accent: #6fd0f0; --term-muted: #6f93a4;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    line-height: 1.65; -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 780px; margin: 0 auto; padding: 56px 24px 96px; }
+
+  .eyebrow { font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; color: var(--accent-strong); margin: 0 0 14px; }
+  .brand { font-weight: 800; color: var(--heading); letter-spacing: -.01em; }
+  .brand span { color: var(--accent); }
+  h1 { font-size: clamp(1.7rem, 4vw, 2.25rem); line-height: 1.15; margin: 0 0 12px; color: var(--heading); font-weight: 800; letter-spacing: -.02em; }
+  .lede { font-size: 1.06rem; color: var(--muted); margin: 0; max-width: 60ch; }
+
+  .callout { margin: 28px 0 0; padding: 16px 18px; border-radius: 10px; background: var(--panel); border: 1px solid var(--border); border-left: 3px solid var(--accent); font-size: .95rem; color: var(--text); }
+  .callout strong { color: var(--heading); }
+
+  h2 { font-size: 1.28rem; color: var(--heading); font-weight: 700; margin: 0 0 6px; letter-spacing: -.01em; }
+  .section-lead { color: var(--muted); margin: 0 0 18px; font-size: .96rem; }
+  hr.div { border: 0; border-top: 1px solid var(--border); margin: 48px 0; }
+
+  .steps { display: flex; flex-direction: column; gap: 34px; margin-top: 8px; }
+  .step { display: grid; grid-template-columns: 44px 1fr; gap: 18px; }
+  .badge { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+  @media (prefers-color-scheme: dark) { .badge { color: #06161e; background: var(--accent); } }
+  :root[data-theme="dark"] .badge { color: #06161e; background: var(--accent); }
+  :root[data-theme="light"] .badge { color: #fff; background: var(--heading); }
+  .badge { color: #fff; background: var(--heading); }
+  .step-body { min-width: 0; padding-top: 2px; }
+  .step-body h3 { margin: 6px 0 6px; font-size: 1.08rem; color: var(--heading); font-weight: 700; }
+  .step-body p { margin: 0 0 12px; color: var(--text); }
+  .step-body p.note { color: var(--muted); font-size: .93rem; }
+
+  .cmd { position: relative; margin: 12px 0 16px; }
+  .cmd pre { margin: 0; background: var(--term-bg); color: var(--term-text); border-radius: 10px; padding: 15px 54px 15px 16px; overflow-x: auto; font-size: .875rem; line-height: 1.6; font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace; border: 1px solid rgba(255,255,255,.08); }
+  .cmd pre .prompt { color: var(--term-accent); user-select: none; }
+  .cmd pre .comment { color: var(--term-muted); }
+  .copy { position: absolute; top: 9px; right: 9px; background: rgba(255,255,255,.14); color: var(--term-text); border: 1px solid transparent; border-radius: 6px; padding: 4px 9px; font-size: .72rem; font-weight: 600; cursor: pointer; letter-spacing: .02em; transition: background .15s ease; }
+  .copy:hover { background: var(--term-accent); color: #06161e; }
+  .copy:focus-visible { outline: 2px solid var(--term-accent); outline-offset: 2px; }
+  .copy.done { background: var(--term-accent); color: #06161e; }
+
+  code.inline { background: var(--panel-2); color: var(--accent-strong); padding: .08em .4em; border-radius: 5px; font-size: .86em; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+  .table-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; margin: 8px 0 4px; }
+  table { border-collapse: collapse; width: 100%; font-size: .93rem; min-width: 460px; }
+  th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  thead th { background: var(--panel); color: var(--heading); font-weight: 700; font-size: .74rem; letter-spacing: .06em; text-transform: uppercase; }
+  tbody tr:last-child td { border-bottom: 0; }
+  td code, th code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .85em; color: var(--accent-strong); }
+  td strong { color: var(--heading); }
+
+  ul.plain { margin: 8px 0 0; padding-left: 20px; }
+  ul.plain li { margin-bottom: 8px; }
+  ul.plain li::marker { color: var(--accent); }
+
+  .foot { margin-top: 56px; padding-top: 22px; border-top: 1px solid var(--border); color: var(--faint); font-size: .85rem; }
+
+  @media (max-width: 520px) {
+    .wrap { padding: 40px 16px 72px; }
+    .step { grid-template-columns: 36px 1fr; gap: 14px; }
+    .badge { width: 36px; height: 36px; font-size: .95rem; }
+  }
+  @media print {
+    .copy { display: none; }
+    .cmd pre { border: 1px solid var(--border); }
+    body { background: #fff; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Guía de despliegue · para el administrador</p>
+    <h1>Poner <span class="brand">oposiciones<span>deporte</span></span> · Planes en producción</h1>
+    <p class="lede">App interna que genera planes de preparación en <code class="inline">.docx</code> a partir del texto de un boletín. Se despliega en contenedores: la app más Caddy, que emite el certificado HTTPS automáticamente.</p>
+    <div class="callout">
+      <strong>Ya está probado de extremo a extremo</strong> — construcción de la imagen, arranque del contenedor y login verificados. Solo queda que <strong>tú añadas la API key real</strong> (paso&nbsp;3) y configures el dominio. No hace falta instalar Node ni LibreOffice en el sistema: la imagen los trae.
+    </div>
+  </header>
+
+  <hr class="div" />
+
+  <section>
+    <h2>Antes de empezar</h2>
+    <p class="section-lead">Necesitas un servidor <strong>Ubuntu/Debian con Docker y Docker&nbsp;Compose</strong>, un <strong>subdominio libre</strong> y los puertos <strong>80 y 443</strong> accesibles desde internet.</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="badge">1</div>
+        <div class="step-body">
+          <h3>Apuntar el DNS</h3>
+          <p>En tu proveedor de dominios, crea un registro <strong>A</strong> del subdominio hacia la IP pública del servidor y espera a que propague:</p>
+          <div class="cmd"><pre><code>planes.tudominio.com   A   &lt;IP_DEL_SERVIDOR&gt;
+
+<span class="prompt">$</span> dig +short planes.tudominio.com   <span class="comment"># debe devolver la IP del servidor</span></code></pre></div>
+          <p class="note">Imprescindible antes de arrancar: Caddy pide el certificado a Let's Encrypt y necesita que el dominio ya resuelva al servidor.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="badge">2</div>
+        <div class="step-body">
+          <h3>Subir el proyecto</h3>
+          <p>Por git o por copia de archivos. <strong>No copies ningún <code class="inline">.env</code> de otra máquina</strong> (por ejemplo el de pruebas en local): el servidor usa el suyo, que se crea en el paso siguiente.</p>
+          <div class="cmd"><pre><code><span class="comment"># opción A — clonar el repositorio</span>
+<span class="prompt">$</span> git clone &lt;URL_DEL_REPO&gt; planes-app &amp;&amp; cd planes-app
+
+<span class="comment"># opción B — descomprimir el zip enviado</span>
+<span class="prompt">$</span> unzip planes-app.zip &amp;&amp; cd planes-app</code></pre></div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="badge">3</div>
+        <div class="step-body">
+          <h3>Configurar el <code class="inline">.env</code> — aquí va la API key</h3>
+          <div class="cmd"><pre><code><span class="prompt">$</span> cp .env.example .env
+<span class="prompt">$</span> nano .env</code></pre></div>
+          <div class="table-scroll">
+            <table>
+              <thead><tr><th>Variable</th><th>Valor</th></tr></thead>
+              <tbody>
+                <tr><td><code>ANTHROPIC_API_KEY</code></td><td><strong>La clave real de la API de Anthropic</strong> (la que custodias tú).</td></tr>
+                <tr><td><code>SESSION_SECRET</code></td><td>Cadena larga aleatoria. Genérala con <code>openssl rand -hex 32</code>.</td></tr>
+                <tr><td><code>APP_USERS</code></td><td>Usuarios del equipo: <code>rosario:CLAVE,colab1:CLAVE2</code> (usuario:contraseña, separados por comas).</td></tr>
+                <tr><td><code>DOMINIO</code></td><td>Tu subdominio, p.&nbsp;ej. <code>planes.tudominio.com</code>.</td></tr>
+                <tr><td><code>NODE_ENV</code></td><td><strong>Déjalo en <code>production</code></strong> (ya viene puesto). Activa las cookies seguras; imprescindible detrás de Caddy.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="note">Guarda con Ctrl+O, Enter, Ctrl+X. Nunca subas el <code class="inline">.env</code> a un repositorio (ya está en <code class="inline">.gitignore</code>).</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="badge">4</div>
+        <div class="step-body">
+          <h3>Abrir el firewall</h3>
+          <p>Los puertos 80 y 443 deben estar abiertos al exterior:</p>
+          <div class="cmd"><pre><code><span class="prompt">$</span> sudo ufw allow 80/tcp
+<span class="prompt">$</span> sudo ufw allow 443/tcp
+<span class="prompt">$</span> sudo ufw status</code></pre></div>
+          <p class="note">Si el proveedor tiene además un firewall de red en su panel, abre 80 y 443 ahí también.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="badge">5</div>
+        <div class="step-body">
+          <h3>Arrancar</h3>
+          <div class="cmd"><pre><code><span class="prompt">$</span> docker compose up -d --build</code></pre></div>
+          <p class="note">La primera vez tarda unos minutos (construye la imagen con LibreOffice). Al terminar, Caddy pide el certificado solo y en ~1 minuto tendrás <code class="inline">https://planes.tudominio.com</code>.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="badge">6</div>
+        <div class="step-body">
+          <h3>Comprobar</h3>
+          <div class="cmd"><pre><code><span class="prompt">$</span> docker compose ps            <span class="comment"># 'app' y 'caddy' en "running"</span>
+<span class="prompt">$</span> docker compose logs -f app   <span class="comment"># "Planes app en http://localhost:3000"</span>
+<span class="prompt">$</span> docker compose logs caddy    <span class="comment"># emisión del certificado TLS</span></code></pre></div>
+          <p>Abre <code class="inline">https://planes.tudominio.com</code>: sale la pantalla de login, entras con un usuario de <code class="inline">APP_USERS</code>, pegas un boletín de prueba y generas un plan → debe descargarse el <code class="inline">.docx</code>.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="div" />
+
+  <section>
+    <h2>Operaciones habituales</h2>
+    <p class="section-lead">Tareas del día a día una vez desplegado.</p>
+    <div class="cmd"><pre><code><span class="comment"># Ver logs de la app</span>
+<span class="prompt">$</span> docker compose logs -f app
+
+<span class="comment"># Añadir / quitar usuarios: edita APP_USERS en .env y recarga (SIN rebuild)</span>
+<span class="prompt">$</span> docker compose up -d
+
+<span class="comment"># Actualizar tras cambios de código</span>
+<span class="prompt">$</span> docker compose up -d --build
+
+<span class="comment"># Parar todo</span>
+<span class="prompt">$</span> docker compose down</code></pre></div>
+  </section>
+
+  <hr class="div" />
+
+  <section>
+    <h2>Si algo falla</h2>
+    <p class="section-lead">Los tropiezos más probables y su causa.</p>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Síntoma</th><th>Causa probable / solución</th></tr></thead>
+        <tbody>
+          <tr><td>El navegador no carga o Caddy no saca certificado</td><td>El DNS aún no resuelve al servidor (paso&nbsp;1) o 80/443 cerrados (paso&nbsp;4). Revisa <code>docker compose logs caddy</code>.</td></tr>
+          <tr><td>Login correcto pero vuelve al login (bucle)</td><td>Falta <code>NODE_ENV=production</code> en <code>.env</code>, o se entra por <code>http://</code> en vez de <code>https://</code>. Entra siempre por HTTPS.</td></tr>
+          <tr><td>Al generar: error de la API / 401</td><td><code>ANTHROPIC_API_KEY</code> vacía o incorrecta en <code>.env</code>. Corrígela y <code>docker compose up -d</code>.</td></tr>
+          <tr><td>Se genera el <code>.docx</code> pero no el PDF de preview</td><td>En la imagen LibreOffice ya viene, así que no debería pasar. El <code>.docx</code> es la descarga principal.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <hr class="div" />
+
+  <section>
+    <h2>Seguridad — en breve</h2>
+    <ul class="plain">
+      <li>La app <strong>nunca</strong> se expone directamente: solo Caddy (80/443). La app escucha en el puerto interno 3000 dentro de la red de Docker.</li>
+      <li>La <code class="inline">ANTHROPIC_API_KEY</code> vive solo en <code class="inline">.env</code> en el servidor, jamás en el navegador.</li>
+      <li>El login tiene límite de intentos: 8 fallos en 15&nbsp;min bloquean temporalmente esa IP.</li>
+      <li>Los <code class="inline">.docx</code>/<code class="inline">.pdf</code> generados se borran solos pasadas 48&nbsp;h (configurable con <code class="inline">RETENTION_HOURS</code> en <code class="inline">.env</code>).</li>
+    </ul>
+  </section>
+
+  <p class="foot">Guías equivalentes en el repositorio: <code class="inline">DESPLIEGUE.md</code> e <code class="inline">INSTRUCCIONES_ADMIN.md</code>. · Para guardar como PDF: abre este archivo en el navegador → Imprimir → Guardar como PDF.</p>
+</div>
+
+<script>
+  document.querySelectorAll(".cmd").forEach(function (block) {
+    var pre = block.querySelector("pre");
+    var btn = document.createElement("button");
+    btn.className = "copy"; btn.type = "button"; btn.textContent = "Copiar";
+    btn.addEventListener("click", function () {
+      var text = pre.innerText.replace(/^\s*\$\s?/gm, "");
+      navigator.clipboard.writeText(text).then(function () {
+        btn.textContent = "Copiado"; btn.classList.add("done");
+        setTimeout(function () { btn.textContent = "Copiar"; btn.classList.remove("done"); }, 1600);
+      });
+    });
+    block.appendChild(btn);
+  });
+</script>
+</body>
+</html>

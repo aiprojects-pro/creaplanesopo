@@ -1,0 +1,44 @@
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: creaplanesopo
+  namespace: creaplanesopo
+  labels:
+    app.kubernetes.io/name: creaplanesopo
+---
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: creaplanesopo
+  namespace: creaplanesopo
+  labels:
+    app.kubernetes.io/name: creaplanesopo
+spec:
+  runPolicy: Serial
+  successfulBuildsHistoryLimit: 3
+  failedBuildsHistoryLimit: 3
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: "2"
+      memory: 3Gi
+  source:
+    type: Git
+    git:
+      uri: https://github.com/aiprojects-pro/creaplanesopo.git
+      ref: main
+  strategy:
+    type: Docker
+    dockerStrategy:
+      dockerfilePath: Dockerfile
+  output:
+    to:
+      kind: ImageStreamTag
+      name: creaplanesopo:latest
+  triggers:
+    - type: GitHub
+      github:
+        secretReference:
+          name: github-webhook

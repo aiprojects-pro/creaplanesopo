@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Acceso · Planes de preparación</title>
+<style>
+  body { font-family: Calibri, "Segoe UI", system-ui, sans-serif; display:flex; min-height:100vh; align-items:center; justify-content:center; margin:0; background:#F2F8FB; }
+  .card { background:#fff; border:1px solid #E3E8EC; border-radius:12px; padding:36px 32px; width:340px; }
+  h1 { color:#0E3A4F; font-size:22px; margin:0 0 4px; }
+  h1 span { color:#16A6D9; }
+  p { color:#6B7682; margin:0 0 24px; font-size:14px; }
+  label { display:block; font-weight:700; color:#0E3A4F; margin:14px 0 6px; font-size:14px; }
+  input { width:100%; border:1px solid #E3E8EC; border-radius:8px; padding:11px 13px; font-size:15px; box-sizing:border-box; }
+  button { width:100%; margin-top:22px; background:#16A6D9; color:#fff; border:0; border-radius:8px; padding:13px; font-size:15px; font-weight:700; cursor:pointer; }
+  .err { color:#b00020; font-size:14px; margin-top:14px; display:none; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>oposiciones<span>deporte</span></h1>
+  <p>Acceso al generador de planes</p>
+  <label>Usuario</label>
+  <input id="user" type="text" autocomplete="username" />
+  <label>Contraseña</label>
+  <input id="pass" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')login()" />
+  <button onclick="login()">Entrar</button>
+  <div class="err" id="err">Credenciales incorrectas</div>
+</div>
+<script>
+async function login(){
+  const user=document.getElementById("user").value, pass=document.getElementById("pass").value;
+  const err=document.getElementById("err");
+  try{
+    const r = await fetch("/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({user,pass})});
+    if(r.ok){ location.href="/"; return; }
+    const data = await r.json().catch(()=>({}));
+    err.textContent = data.error || "Credenciales incorrectas";
+  }catch(e){
+    err.textContent = "Error de red. Inténtalo de nuevo.";
+  }
+  err.style.display="block";
+}
+</script>
+</body>
+</html>

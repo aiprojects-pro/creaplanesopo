@@ -1,0 +1,21 @@
+# No hornear secretos ni artefactos locales dentro de la imagen.
+# El .env se inyecta en runtime via docker-compose (env_file), NUNCA se copia.
+.env
+.env.*
+node_modules
+.git
+.gitignore
+.claude
+.DS_Store
+._*
+**/._*
+outputs/*
+uploads/*
+*.zip
+Caddyfile
+docker-compose.yml
+# Los assets generados (src/_common.js, src/*.png, src/icons/) se regeneran en
+# la build con setup.sh; no dependemos de copiarlos.
+src/_common.js
+src/icons
+# OJO: NO excluir src/assets-source/ — es la fuente real de los assets/marca.

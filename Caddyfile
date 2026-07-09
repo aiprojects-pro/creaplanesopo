@@ -1,0 +1,24 @@
+# Caddyfile — Reverse proxy con HTTPS automático (Let's Encrypt).
+# El dominio se inyecta desde la variable DOMINIO del .env (docker-compose).
+# Caddy pide y renueva el certificado TLS solo; no hay que tocar nada más.
+
+{$DOMINIO} {
+	# Reenvía todo el tráfico a la app (nombre de servicio "app" en la red de compose).
+	reverse_proxy app:3000
+
+	# Límite de tamaño de subida (el boletín es un .txt pequeño; 5 MB de margen).
+	request_body {
+		max_size 5MB
+	}
+
+	# Cabeceras de seguridad básicas.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	encode gzip
+}
