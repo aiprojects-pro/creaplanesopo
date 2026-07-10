@@ -215,6 +215,38 @@
   <hr class="div" />
 
   <section>
+    <h2>Actualizar a una versión nueva</h2>
+    <p class="section-lead">Cuando te pasen un <code class="inline">planes-app.zip</code> nuevo. Se conservan tu <code class="inline">.env</code> y el histórico (<code class="inline">outputs/</code>).</p>
+    <div class="cmd"><pre><code><span class="comment"># 1) Copia de seguridad rápida (recomendado)</span>
+<span class="prompt">$</span> cd ~/planes-app
+<span class="prompt">$</span> cp .env ~/.env.backup
+<span class="prompt">$</span> tar czf ~/outputs-backup-$(date +%F).tgz outputs
+
+<span class="comment"># 2) Subir el zip nuevo al servidor (desde tu equipo)</span>
+<span class="prompt">$</span> scp planes-app.zip usuario@IP_SERVIDOR:~/
+
+<span class="comment"># 3) Sustituir el código (el zip NO trae .env ni outputs/, no los pisa)</span>
+<span class="prompt">$</span> cd ~
+<span class="prompt">$</span> unzip -o planes-app.zip -d planes-app-nuevo
+<span class="prompt">$</span> cp -r planes-app-nuevo/planes-app/. ~/planes-app/
+<span class="prompt">$</span> rm -rf planes-app-nuevo
+
+<span class="comment"># 4) Reconstruir y arrancar</span>
+<span class="prompt">$</span> cd ~/planes-app
+<span class="prompt">$</span> docker compose up -d --build
+
+<span class="comment"># 5) Comprobar</span>
+<span class="prompt">$</span> docker compose ps
+<span class="prompt">$</span> docker compose logs -f app</code></pre></div>
+    <ul class="plain">
+      <li>Mantén <code class="inline">NODE_ENV=production</code> en el <code class="inline">.env</code> y entra siempre por HTTPS.</li>
+      <li><strong>No borres la carpeta <code class="inline">outputs/</code></strong>: contiene el histórico y los planes generados.</li>
+    </ul>
+  </section>
+
+  <hr class="div" />
+
+  <section>
     <h2>Operaciones habituales</h2>
     <p class="section-lead">Tareas del día a día una vez desplegado.</p>
     <div class="cmd"><pre><code><span class="comment"># Ver logs de la app</span>

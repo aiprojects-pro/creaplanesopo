@@ -17,10 +17,33 @@ const {
   WidthType, BorderStyle, AlignmentType, ShadingType, VerticalAlign, HeightRule, PageBreak,
   CYAN, NAVY, INK, GREY, LINE, SOFT, WHITE, FONT,
   fmt, txt, p, spacer, img, ico, cell, noBorder, featureRow, chip,
-  sectionHead, rule, tycLink, link, makeHeader, makeFooter,
+  sectionHead, rule, tycLink, link, makeHeader, makeFooter, Header,
   cotalySection, cursosTransversales, BANCO_SUPUESTOS, SERVICIOS,
 } = C;
 const A = AlignmentType;
+
+// -------- Cabecera corregida (no tocamos _common.js) --------
+// Igual que makeHeader pero con el logo alineado ARRIBA en su celda. Con
+// valign BOTTOM, el LibreOffice del contenedor anclaba el logo por su base a la
+// línea del texto de contacto y, al ser el logo más alto, su parte superior se
+// salía de la página y se recortaba. Alineado arriba, el logo se ancla al borde
+// superior de la cabecera y se ve entero en cualquier versión de LibreOffice.
+function makeHeaderFix(logoPath) {
+  if (!fs.existsSync(logoPath)) throw new Error("FALTA EL LOGO REAL en " + logoPath);
+  return new Header({ children: [
+    new Table({
+      width: { size: 9360, type: WidthType.DXA }, columnWidths: [6360, 3000], borders: noBorder,
+      rows: [new TableRow({ height: { value: 1240, rule: HeightRule.ATLEAST }, children: [
+        cell([new Paragraph({ spacing: { after: 0, line: 1200, lineRule: "atLeast" }, children: [img(logoPath, 128, 75)] })], { w: 6360, valign: VerticalAlign.TOP, margins: { top: 0, bottom: 0, left: 0, right: 0 } }),
+        cell([
+          p([txt("Centro de preparación de oposiciones", { color: GREY, size: 16 })], { after: 0, align: A.RIGHT, line: 200 }),
+          p([txt("info@oposicionesdeporte.com", { color: CYAN, size: 16, bold: true })], { after: 0, align: A.RIGHT, line: 200 }),
+        ], { w: 3000, valign: VerticalAlign.TOP, margins: { top: 0, bottom: 0, left: 0, right: 0 } }),
+      ]})],
+    }),
+    new Paragraph({ children: [], border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: LINE, space: 6 } }, spacing: { after: 160 } }),
+  ]});
+}
 
 // URLs/datos fijos de marca (idénticos a la skill).
 const URLS = {
@@ -71,6 +94,27 @@ function splitTemaNum(s, fallback) {
   const m = str.match(/^(?:tema\s+)?(\d+)\s*[.)\-–—:]+\s*(.+)$/is);
   if (m && m[2].trim()) return { num: m[1], text: m[2].trim() };
   return { num: String(fallback), text: str };
+}
+
+// Resumen temático de un bloque para la tarjeta de "El temario". Se construye a
+// partir de los PROPIOS temas del bloque (fuente fiable: el modelo a veces mete
+// aquí la descripción del proceso o lo deja vacío). Toma el primer inciso de
+// cada tema. Respaldo: el resumen del modelo, y si no, un texto genérico.
+function resumenBloque(provided, temas, tipo) {
+  const lista = Array.isArray(temas) ? temas.filter(Boolean) : [];
+  if (lista.length) {
+    const items = lista.slice(0, 6).map((t) => {
+      let s = splitTemaNum(t, 1).text.split(/[.:;(]/)[0].trim();
+      if (s.length > 46) s = s.slice(0, 44).trim() + "…";
+      return s;
+    }).filter(Boolean);
+    let out = items.join(" · ");
+    if (lista.length > 6 && out) out += " · …";
+    if (out) return out;
+  }
+  const p = String(provided == null ? "" : provided).trim();
+  if (p) return p;
+  return tipo === "general" ? "Materias comunes del proceso." : "Materias específicas del puesto.";
 }
 
 // -------- Anexo: lista de temas en tarjetas numeradas (igual que la skill) --------
@@ -308,18 +352,34 @@ function buildDecision(planData, precios) {
     body.push(spacer(80));
     const ng = t.temasGeneral?.length || 0, ne = t.temasEspecifico?.length || 0;
     if (ng && ne) {
-      body.push(p([txt("El temario consta de ", { color: INK, size: 20 }), txt(t.ntemas + " temas", { bold: true, color: NAVY, size: 20 }),
+      // Total coherente con la suma de los dos bloques (el modelo a veces pone
+      // un ntemas que no cuadra con los enunciados listados).
+      const total = ng + ne;
+      body.push(p([txt("El temario consta de ", { color: INK, size: 20 }), txt(total + " temas", { bold: true, color: NAVY, size: 20 }),
         txt(": un temario general (" + ng + " temas) y un temario específico (" + ne + " temas).", { color: INK, size: 20 })], { after: 140, line: 264 }));
       body.push(new Table({
         width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: [49, 2, 49], borders: noBorder,
         rows: [new TableRow({ children: [
-          cell([p([txt("Temario general · " + ng + " temas", { bold: true, color: CYAN, size: 17, caps: true })], { after: 40, line: 230 }), p([txt(conv.resumenGeneral || "", { color: GREY, size: 18 })], { after: 0, line: 240 })], { width: 49, fill: SOFT, margins: { top: 120, bottom: 120, left: 140, right: 120 } }),
+          cell([p([txt("Temario general · " + ng + " temas", { bold: true, color: CYAN, size: 17, caps: true })], { after: 40, line: 230 }), p([txt(resumenBloque(conv.resumenGeneral, t.temasGeneral, "general"), { color: GREY, size: 18 })], { after: 0, line: 240 })], { width: 49, fill: SOFT, margins: { top: 120, bottom: 120, left: 140, right: 120 } }),
           cell([p([], { after: 0 })], { width: 2, margins: { top: 0, bottom: 0, left: 0, right: 0 } }),
-          cell([p([txt("Temario específico · " + ne + " temas", { bold: true, color: CYAN, size: 17, caps: true })], { after: 40, line: 230 }), p([txt(conv.resumenEspecifico || "", { color: GREY, size: 18 })], { after: 0, line: 240 })], { width: 49, fill: SOFT, margins: { top: 120, bottom: 120, left: 140, right: 120 } }),
+          cell([p([txt("Temario específico · " + ne + " temas", { bold: true, color: CYAN, size: 17, caps: true })], { after: 40, line: 230 }), p([txt(resumenBloque(conv.resumenEspecifico, t.temasEspecifico, "especifico"), { color: GREY, size: 18 })], { after: 0, line: 240 })], { width: 49, fill: SOFT, margins: { top: 120, bottom: 120, left: 140, right: 120 } }),
         ]})]
       }));
     } else {
-      body.push(p([txt("El temario consta de ", { color: INK, size: 20 }), txt(t.ntemas + " temas", { bold: true, color: NAVY, size: 20 }), txt(".", { color: INK, size: 20 })], { after: 140, line: 264 }));
+      // Sin distinción común/específico: un único bloque, pero también con su
+      // cuadro azul de resumen (debe verse siempre que haya temario).
+      const temas = (ne ? t.temasEspecifico : t.temasGeneral) || [];
+      const totalUnico = temas.length || t.ntemas || 0;
+      body.push(p([txt("El temario consta de ", { color: INK, size: 20 }), txt(totalUnico + " temas", { bold: true, color: NAVY, size: 20 }), txt(".", { color: INK, size: 20 })], { after: 140, line: 264 }));
+      body.push(new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: [100], borders: noBorder,
+        rows: [new TableRow({ children: [
+          cell([
+            p([txt("Temario · " + totalUnico + " temas", { bold: true, color: CYAN, size: 17, caps: true })], { after: 40, line: 230 }),
+            p([txt(resumenBloque(conv.resumenGeneral || conv.resumenEspecifico, temas, "especifico"), { color: GREY, size: 18 })], { after: 0, line: 240 }),
+          ], { width: 100, fill: SOFT, margins: { top: 120, bottom: 120, left: 140, right: 120 } }),
+        ]})]
+      }));
     }
     body.push(spacer(80));
     body.push(p([txt("El detalle completo de los enunciados está en el anexo final.", { color: GREY, size: 18, italics: true })], { after: 0 }));
@@ -443,8 +503,11 @@ async function renderPlan(planData, precios, assetsDir) {
     title: "Plan de preparación · " + planData.conv.plaza,
     styles: { default: { document: { run: { font: FONT, size: 21, color: INK } } } },
     sections: [{
-      properties: { page: { size: { width: 12240, height: 15840 }, margin: { top: 1100, bottom: 1100, left: 1440, right: 1440 } } },
-      headers: { default: makeHeader(path.join(assetsDir, "byd_logo.png")) },
+      // Margen superior amplio + distancia de cabecera fija: deja sitio a la
+      // cabecera (logo alto) para que no se solape con el cuerpo en ningún
+      // LibreOffice. El recorte del logo se corrige además en makeHeaderFix.
+      properties: { page: { size: { width: 12240, height: 15840 }, margin: { top: 2160, bottom: 1100, left: 1440, right: 1440, header: 420, footer: 708 } } },
+      headers: { default: makeHeaderFix(path.join(assetsDir, "byd_logo.png")) },
       footers: { default: makeFooter("Plan de preparación · " + planData.conv.plaza) },
       children: body,
     }],

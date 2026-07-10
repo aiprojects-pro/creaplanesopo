@@ -34,6 +34,8 @@ INSTRUCCIONES DE SALIDA:
 - En los temarios, copia el enunciado de cada tema SIN su número inicial (quita "1.", "Tema 1.", "1)"…): el sistema los numera automáticamente.
 - IDIOMA DEL PLAN: redacta el contenido descriptivo que extraes (enunciados de temas, nombres y descripciones de fases, resúmenes) en el idioma que el operador indique en OBSERVACIONES; si no indica ninguno, en ESPAÑOL (traduce si el boletín está en otra lengua, p. ej. catalán/gallego/valenciano/euskera). Mantén SIN traducir cifras, fechas, referencias oficiales (BOE/BOP/DOGC…) y nombres propios. Rellena conv.idioma con ese idioma ("Español" por defecto).
 - TEMARIO: refleja la estructura del boletín. Si distingue temario general/común y específico, reparte en temasGeneral y temasEspecifico. Si NO lo distingue, pon TODOS los temas en un único array y deja el otro vacío (el sistema lo etiquetará simplemente como "Temario").
+- ntemas es el TOTAL de temas y debe COINCIDIR con la suma de los temas generales + específicos (no pongas solo el de un bloque).
+- resumenGeneral y resumenEspecifico son un resumen temático breve de las MATERIAS de cada bloque (p. ej. "Constitución, régimen local, contratación, PRL…"), NO la descripción del proceso selectivo. Rellena ambos cuando existan los dos bloques.
 
 Esquema JSON EXACTO que debes devolver:
 {
@@ -49,8 +51,8 @@ Esquema JSON EXACTO que debes devolver:
     "boletin": string,             // referencia + plazo, en una frase
     "cooficial": boolean,          // true si Galicia/Cataluña/C.Valenciana/País Vasco
     "lenguaCooficial": string | null,   // "gallego" | "catalán" | "valenciano" | "euskera" | null
-    "resumenGeneral": string | null,
-    "resumenEspecifico": string | null
+    "resumenGeneral": string | null,     // resumen temático BREVE del bloque general/común (materias principales), sacado de sus temas. NO la descripción del proceso.
+    "resumenEspecifico": string | null   // resumen temático BREVE del bloque específico (materias principales), sacado de sus temas.
   },
   "caso": 1 | 2 | 3 | 4 | 5,       // según la tabla de casos de las reglas
   "flags": {                        // qué tipos de ejercicio existen (para cursos transversales)

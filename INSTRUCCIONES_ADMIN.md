@@ -104,6 +104,38 @@ Abre `https://planes.tudominio.com`:
 
 ---
 
+## Actualizar a una versión nueva
+
+Cuando te pasen un `planes-app.zip` nuevo. Se conservan tu `.env` y el histórico
+(`outputs/`), porque el zip no los incluye.
+
+```bash
+# 1) Copia de seguridad rápida (recomendado)
+cd ~/planes-app
+cp .env ~/.env.backup
+tar czf ~/outputs-backup-$(date +%F).tgz outputs
+
+# 2) Subir el zip nuevo al servidor (desde tu equipo)
+scp planes-app.zip usuario@IP_SERVIDOR:~/
+
+# 3) Sustituir el código (el zip NO trae .env ni outputs/, no los pisa)
+cd ~
+unzip -o planes-app.zip -d planes-app-nuevo
+cp -r planes-app-nuevo/planes-app/. ~/planes-app/
+rm -rf planes-app-nuevo
+
+# 4) Reconstruir y arrancar
+cd ~/planes-app
+docker compose up -d --build
+
+# 5) Comprobar
+docker compose ps
+docker compose logs -f app
+```
+
+- Mantén `NODE_ENV=production` en el `.env` y entra siempre por HTTPS.
+- **No borres la carpeta `outputs/`**: contiene el histórico y los planes generados.
+
 ## Operaciones habituales
 
 ```bash
