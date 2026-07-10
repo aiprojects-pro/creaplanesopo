@@ -120,6 +120,16 @@ docker compose up -d --build
 docker compose down
 ```
 
+## Histórico de planes
+
+Cada plan generado queda guardado y se puede buscar por **año** y **mes**:
+
+- En la app hay un enlace **"Histórico"** (arriba a la derecha) con filtros de año y
+  mes y descarga del Word/PDF de cualquier plan anterior.
+- El histórico y los ficheros generados viven en la carpeta `outputs/` del servidor
+  (montada como volumen), así que **se conservan entre redespliegues**. No borres esa
+  carpeta si quieres mantener el histórico; puedes copiarla para hacer copia de seguridad.
+
 ## Si algo falla
 
 | Síntoma | Causa probable / solución |

@@ -6,14 +6,9 @@ node_modules
 .git
 .gitignore
 .claude
-.DS_Store
-._*
-**/._*
 outputs/*
 uploads/*
 *.zip
-Caddyfile
-docker-compose.yml
 # Los assets generados (src/_common.js, src/*.png, src/icons/) se regeneran en
 # la build con setup.sh; no dependemos de copiarlos.
 src/_common.js

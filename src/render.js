@@ -59,16 +59,31 @@ function priceCard(body, { tag, tagColor, titulo, sub, precioBruto, precioOferta
   body.push(spacer(140));
 }
 
+// Separa la numeración que trae el enunciado del boletín ("1.", "Tema 1.",
+// "11)", "5.-"...) y la reutiliza como número del tema. Así:
+//   - el número mostrado es EL DEL BOLETÍN (cada proceso el suyo; 1..N, 11..20…),
+//   - y NO se duplica: antes salía "Tema 1. 1. ...", ahora "Tema 1. ...".
+// Exige un separador tras la cifra para no tocar enunciados que empiezan por un
+// número real (p.ej. "112 servicio..."). Si el enunciado no trae número, usa el
+// ordinal de posición como respaldo.
+function splitTemaNum(s, fallback) {
+  const str = String(s == null ? "" : s).trim();
+  const m = str.match(/^(?:tema\s+)?(\d+)\s*[.)\-–—:]+\s*(.+)$/is);
+  if (m && m[2].trim()) return { num: m[1], text: m[2].trim() };
+  return { num: String(fallback), text: str };
+}
+
 // -------- Anexo: lista de temas en tarjetas numeradas (igual que la skill) --------
 function temaList(body, titulo, temas) {
   body.push(p([txt(titulo, { bold: true, color: CYAN, size: 18, caps: true })], { before: 60, after: 60, line: 230 }));
-  temas.forEach((t, i) => {
+  temas.forEach((raw, i) => {
+    const { num, text } = splitTemaNum(raw, i + 1);
     body.push(new Table({
       width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: [6, 94], borders: noBorder,
       rows: [new TableRow({ children: [
-        cell([p([txt(String(i + 1), { bold: true, color: CYAN, size: 17 })], { after: 0, line: 220, align: A.CENTER })],
+        cell([p([txt(num, { bold: true, color: CYAN, size: 17 })], { after: 0, line: 220, align: A.CENTER })],
           { width: 6, fill: SOFT, valign: VerticalAlign.TOP, margins: { top: 40, bottom: 40, left: 20, right: 20 } }),
-        cell([p([txt("Tema " + (i + 1) + ". ", { bold: true, color: NAVY, size: 17 }), txt(t, { color: INK, size: 17 })], { after: 0, line: 230 })],
+        cell([p([txt("Tema " + num + ". ", { bold: true, color: NAVY, size: 17 }), txt(text, { color: INK, size: 17 })], { after: 0, line: 230 })],
           { width: 94, margins: { top: 40, bottom: 40, left: 120, right: 40 } }),
       ]})]
     }));
@@ -230,13 +245,17 @@ function seccionProceso(body, planData, titulo, intro) {
   body.push(sectionHead("test", titulo));
   body.push(spacer(80));
   if (intro) body.push(p([txt(intro, { color: INK, size: 20 })], { after: 140, line: 264 }));
-  (planData.fases || []).forEach((fase) => {
+  (planData.fases || []).forEach((fase, i) => {
     const tag = fase.tag || "";
     const tagColor = tag.includes("TEST") || tag === "Práctico" ? CYAN : (tag === "No temario" ? GREY : NAVY);
+    // La columna del nº es estrecha: solo debe llevar el ordinal. Si el modelo
+    // mete texto largo en "n" (p.ej. "Oposición — Ejercicio 1") usamos el índice
+    // secuencial para no romper la maqueta; el nombre de la fase ya va en fase.t.
+    const nDisp = /^\s*\d{1,3}\s*$/.test(String(fase.n || "")) ? String(fase.n).trim() : String(i + 1);
     body.push(new Table({
       width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: [7, 68, 25], borders: noBorder,
       rows: [new TableRow({ children: [
-        cell([p([txt(fase.n, { bold: true, color: CYAN, size: 26 })], { after: 0, line: 280 })], { width: 7, valign: VerticalAlign.TOP, margins: { top: 30, bottom: 30, left: 0, right: 40 } }),
+        cell([p([txt(nDisp, { bold: true, color: CYAN, size: 26 })], { after: 0, line: 280 })], { width: 7, valign: VerticalAlign.TOP, margins: { top: 30, bottom: 30, left: 0, right: 40 } }),
         cell([p([txt(fase.t, { bold: true, color: NAVY, size: 20 })], { after: 8, line: 240 }), p([txt(fase.d, { color: GREY, size: 18 })], { after: 0, line: 240 })], { width: 68, margins: { top: 30, bottom: 30, left: 0, right: 60 } }),
         cell([chip(tag, tagColor)], { width: 25, valign: VerticalAlign.TOP, margins: { top: 30, bottom: 30, left: 0, right: 0 } }),
       ]})]
@@ -250,7 +269,7 @@ function portadaDecision(body, planData) {
   const conv = planData.conv, t = planData.temario || {};
   body.push(spacer(60));
   body.push(p([txt("PLAN DE PREPARACIÓN", { bold: true, color: CYAN, size: 24, caps: true })], { after: 50 }));
-  body.push(p([txt(conv.plaza, { bold: true, color: NAVY, size: 48 })], { after: 40, line: 520 }));
+  body.push(p([txt(conv.plaza, { bold: true, color: NAVY, size: 48 })], { after: 40, line: 300 }));
   body.push(p([txt(conv.admin, { color: GREY, size: 24 })], { after: 160 }));
   const datos = [
     ["Plazas", (conv.nplazas || "—") + " · " + (conv.regimen || "—")],
@@ -258,7 +277,7 @@ function portadaDecision(body, planData) {
     ["Temario", t.tieneTemario ? t.ntemas + " temas" : "Sin temario"],
     ["Sistema", conv.sistema || "—"],
     ["Ejercicios", conv.ejercicios || "—"],
-    ["Idioma", conv.idioma || "—"],
+    ["Idioma", conv.idioma || "Español"],
   ];
   const dRows = [];
   for (let i = 0; i < datos.length; i += 3) {
@@ -342,9 +361,12 @@ function buildDecision(planData, precios) {
     body.push(new Paragraph({ children: [new PageBreak()] }));
     body.push(sectionHead("doc", "Anexo · Relación de temas"));
     body.push(spacer(80));
-    if (ng) temaList(body, "Temario general · " + ng + " temas", planData.temario.temasGeneral);
-    if (ng && ne) body.push(spacer(80));
-    if (ne) temaList(body, "Temario específico · " + ne + " temas", planData.temario.temasEspecifico);
+    // Solo se distingue "general/específico" si el boletín trae AMBOS bloques.
+    // Si solo hay uno, se etiqueta simplemente "Temario".
+    const ambos = ng && ne;
+    if (ng) temaList(body, (ambos ? "Temario general · " : "Temario · ") + ng + " temas", planData.temario.temasGeneral);
+    if (ambos) body.push(spacer(80));
+    if (ne) temaList(body, (ambos ? "Temario específico · " : "Temario · ") + ne + " temas", planData.temario.temasEspecifico);
   }
 
   // Canales
@@ -360,7 +382,7 @@ function buildCaptacion(planData, precios) {
   // Portada con gancho
   body.push(spacer(80));
   body.push(p([txt("¿QUIERES TU PLAZA DE", { bold: true, color: CYAN, size: 22, caps: true })], { after: 20 }));
-  body.push(p([txt(conv.plaza + "?", { bold: true, color: NAVY, size: 46 })], { after: 40, line: 500 }));
+  body.push(p([txt(conv.plaza + "?", { bold: true, color: NAVY, size: 46 })], { after: 40, line: 300 }));
   body.push(p([txt(conv.admin, { color: GREY, size: 22 })], { after: 200 }));
   // 3 claims
   const claims = [["2017", "Preparando opositores del deporte desde 2017"], ["73%", "de aprobados en nuestros procesos"], ["1 a 1", "Preparador funcionario en activo, +15 años"]];

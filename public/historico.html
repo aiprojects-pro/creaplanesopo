@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Histórico de planes · oposicionesdeporte.com</title>
+<style>
+  :root { --cyan:#16A6D9; --navy:#0E3A4F; --ink:#1F2933; --grey:#6B7682; --line:#E3E8EC; --soft:#F2F8FB; }
+  * { box-sizing: border-box; }
+  body { font-family: Calibri, "Segoe UI", system-ui, sans-serif; color: var(--ink); margin:0; background:#fff; }
+  header { display:flex; align-items:center; justify-content:space-between; padding:18px 28px; border-bottom:1px solid var(--line); }
+  header .brand { font-weight:700; color:var(--navy); font-size:20px; }
+  header .brand span { color:var(--cyan); }
+  header a { color:var(--cyan); font-weight:700; text-decoration:none; }
+  header button { border:0; background:none; color:var(--grey); cursor:pointer; }
+  main { max-width:960px; margin:0 auto; padding:32px 24px 80px; }
+  h1 { color:var(--navy); font-size:26px; margin:0 0 6px; }
+  .sub { color:var(--grey); margin:0 0 24px; }
+  .filtros { display:flex; gap:16px; flex-wrap:wrap; align-items:flex-end; margin-bottom:20px; }
+  .campo { display:flex; flex-direction:column; gap:6px; }
+  .campo label { font-weight:700; color:var(--navy); font-size:13px; }
+  select { border:1px solid var(--line); border-radius:8px; padding:10px 12px; font-size:15px; font-family:inherit; background:#fff; min-width:150px; }
+  .count { color:var(--grey); font-size:14px; margin-left:auto; }
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  th, td { text-align:left; padding:11px 12px; border-bottom:1px solid var(--line); vertical-align:top; }
+  thead th { background:var(--soft); color:var(--navy); font-weight:700; font-size:12px; letter-spacing:.04em; text-transform:uppercase; }
+  tbody tr:hover { background:#fafcfe; }
+  td.fecha { white-space:nowrap; color:var(--grey); font-variant-numeric:tabular-nums; }
+  td .plaza { font-weight:700; color:var(--navy); }
+  td .admin { color:var(--grey); font-size:13px; }
+  .chip { display:inline-block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; padding:2px 8px; border-radius:20px; }
+  .chip.dec { background:#e6f4fa; color:#0c6e93; }
+  .chip.cap { background:#eaf7ef; color:#1c7c54; }
+  td.dl a { color:var(--cyan); font-weight:700; text-decoration:none; white-space:nowrap; }
+  td.dl span { color:var(--line); }
+  .vacio { color:var(--grey); padding:40px 0; text-align:center; }
+  .err { color:#b00020; padding:20px 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">oposiciones<span>deporte</span> · Histórico</div>
+  <div style="display:flex;gap:20px;align-items:center;">
+    <a href="/">Generar plan</a>
+    <button onclick="logout()">Salir</button>
+  </div>
+</header>
+<main>
+  <h1>Histórico de planes</h1>
+  <p class="sub">Todos los planes generados. Filtra por año y mes para encontrar uno.</p>
+
+  <div class="filtros">
+    <div class="campo">
+      <label for="anio">Año</label>
+      <select id="anio" onchange="buscar()"></select>
+    </div>
+    <div class="campo">
+      <label for="mes">Mes</label>
+      <select id="mes" onchange="buscar()">
+        <option value="">Todos</option>
+        <option value="1">Enero</option>
+        <option value="2">Febrero</option>
+        <option value="3">Marzo</option>
+        <option value="4">Abril</option>
+        <option value="5">Mayo</option>
+        <option value="6">Junio</option>
+        <option value="7">Julio</option>
+        <option value="8">Agosto</option>
+        <option value="9">Septiembre</option>
+        <option value="10">Octubre</option>
+        <option value="11">Noviembre</option>
+        <option value="12">Diciembre</option>
+      </select>
+    </div>
+    <span class="count" id="count"></span>
+  </div>
+
+  <div id="resultado"></div>
+</main>
+
+<script>
+const MESES = ["","enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+async function logout(){ await fetch("/api/logout",{method:"POST"}); location.href="/login.html"; }
+
+function fmtFecha(ts){
+  const d = new Date(ts);
+  if (isNaN(d)) return ts || "";
+  const p = (n)=>String(n).padStart(2,"0");
+  return `${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+let yearsCargados = false;
+
+async function buscar(){
+  const anio = document.getElementById("anio").value;
+  const mes = document.getElementById("mes").value;
+  const res = document.getElementById("resultado");
+  const count = document.getElementById("count");
+  const qs = new URLSearchParams();
+  if (anio) qs.set("year", anio);
+  if (mes) qs.set("month", mes);
+  try {
+    const r = await fetch("/api/history?"+qs.toString());
+    if (!r.ok){ res.innerHTML = '<div class="err">No se pudo cargar el histórico.</div>'; return; }
+    const data = await r.json();
+
+    // Poblar el selector de años una sola vez: desde el plan más antiguo (o el
+    // año actual) hasta 5 años en el futuro, para no quedarse "clavado" en el
+    // año en curso. Por defecto "Todos".
+    if (!yearsCargados){
+      const sel = document.getElementById("anio");
+      const actual = new Date().getFullYear();
+      const dataYears = data.years || [];
+      const min = Math.min(actual, ...(dataYears.length ? dataYears : [actual]));
+      const max = actual + 5;
+      const opts = ['<option value="">Todos</option>'];
+      for (let y = max; y >= min; y--) opts.push(`<option value="${y}">${y}</option>`);
+      sel.innerHTML = opts.join("");
+      yearsCargados = true;
+    }
+
+    count.textContent = data.total + (data.total===1 ? " plan" : " planes");
+
+    if (!data.items.length){
+      res.innerHTML = '<div class="vacio">No hay planes para ese periodo.</div>';
+      return;
+    }
+    let rows = data.items.map(it => `
+      <tr>
+        <td class="fecha">${fmtFecha(it.ts)}</td>
+        <td><div class="plaza">${esc(it.plaza)}</div><div class="admin">${esc(it.admin)}</div></td>
+        <td>${it.caso!=null ? "Caso "+esc(it.caso) : "—"}</td>
+        <td><span class="chip ${it.modo==="captacion"?"cap":"dec"}">${it.modo==="captacion"?"Captación":"Decisión"}</span></td>
+        <td class="dl">
+          ${it.docx ? `<a href="/api/download/${encodeURIComponent(it.docx)}">📄 Word</a>` : ""}
+          ${it.pdf ? ` <span>·</span> <a href="/api/download/${encodeURIComponent(it.pdf)}" target="_blank">👁️ PDF</a>` : ""}
+        </td>
+      </tr>`).join("");
+    res.innerHTML = `<table>
+      <thead><tr><th>Fecha</th><th>Plaza / Administración</th><th>Caso</th><th>Modo</th><th>Descargas</th></tr></thead>
+      <tbody>${rows}</tbody></table>`;
+  } catch(e){
+    res.innerHTML = '<div class="err">Error de red: '+esc(e.message)+'</div>';
+  }
+}
+buscar();
+</script>
+</body>
+</html>

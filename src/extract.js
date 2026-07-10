@@ -30,6 +30,10 @@ INSTRUCCIONES DE SALIDA:
 - Responde ÚNICAMENTE con un objeto JSON válido. Sin markdown, sin \`\`\`, sin texto antes o después.
 - Si un dato no aparece en el boletín y no puedes inferirlo con seguridad, ponlo como null y añádelo al array "faltantes" con una nota de qué habría que preguntar.
 - NO calcules importes en euros: solo extrae nplazas, nº de temas y clasifica ejercicios/servicios. El sistema aplica los 23 €/tema, −10%, 495/396 €, etc.
+- En "fases", el campo "n" es SOLO el número de orden ("1", "2", "3"…); el nombre del ejercicio va en "t". Nunca pongas "Ejercicio 1", "Fase previa", "Oposición", etc. en "n".
+- En los temarios, copia el enunciado de cada tema SIN su número inicial (quita "1.", "Tema 1.", "1)"…): el sistema los numera automáticamente.
+- IDIOMA DEL PLAN: redacta el contenido descriptivo que extraes (enunciados de temas, nombres y descripciones de fases, resúmenes) en el idioma que el operador indique en OBSERVACIONES; si no indica ninguno, en ESPAÑOL (traduce si el boletín está en otra lengua, p. ej. catalán/gallego/valenciano/euskera). Mantén SIN traducir cifras, fechas, referencias oficiales (BOE/BOP/DOGC…) y nombres propios. Rellena conv.idioma con ese idioma ("Español" por defecto).
+- TEMARIO: refleja la estructura del boletín. Si distingue temario general/común y específico, reparte en temasGeneral y temasEspecifico. Si NO lo distingue, pon TODOS los temas en un único array y deja el otro vacío (el sistema lo etiquetará simplemente como "Temario").
 
 Esquema JSON EXACTO que debes devolver:
 {
@@ -41,7 +45,7 @@ Esquema JSON EXACTO que debes devolver:
     "grupo": string,
     "sistema": string,             // "Oposición" | "Concurso-oposición" | "Concurso de méritos" | ...
     "ejercicios": string,          // resumen legible: "Test + práctico", "Solo concurso", etc.
-    "idioma": string | null,
+    "idioma": string,              // idioma en que se ENTREGA el plan: el que indique el operador en OBSERVACIONES; por defecto "Español". Nunca null.
     "boletin": string,             // referencia + plazo, en una frase
     "cooficial": boolean,          // true si Galicia/Cataluña/C.Valenciana/País Vasco
     "lenguaCooficial": string | null,   // "gallego" | "catalán" | "valenciano" | "euskera" | null
@@ -59,14 +63,18 @@ Esquema JSON EXACTO que debes devolver:
   "temario": {
     "tieneTemario": boolean,
     "ntemas": number | null,       // total de temas (0/null si no hay temario)
-    "temasGeneral": string[],      // enunciados literales; [] si no se publican
-    "temasEspecifico": string[],   // enunciados literales; [] si no se publican
+    "temasGeneral": string[],      // enunciados SIN numeración inicial ("1.", "Tema 1.", "1)"...): el sistema numera. [] si no se publican
+    "temasEspecifico": string[],   // igual: enunciados SIN numeración inicial. [] si no se publican
     "desglosePorGrupos": [ { "grupo": string, "ntemas": number, "descripcion": string } ] | null
   },
   "servicios": string[],           // claves del catálogo SERVICIOS que aplican, p.ej. ["temario","practico"]. tutoria y packIntensivo van SIEMPRE, no hace falta listarlos.
   "servicioMeritos": "concurso" | "bolsa" | "libreDesig" | null,  // solo caso 5
   "fases": [                       // TODAS las fases del proceso, en orden
-    { "n": string, "t": string, "d": string, "tag": string }   // tag: Previa|Temario · TEST|Temario · DESARROLLO|Práctico|No temario|Méritos|Final
+    { "n": string, "t": string, "d": string, "tag": string }
+    // n  = SOLO el número de orden secuencial: "1", "2", "3"... NUNCA el nombre ni el tipo de fase.
+    // t  = nombre de la fase o ejercicio (aquí va "Primer ejercicio · Test", "Prueba de catalán", etc.).
+    // d  = descripción breve de la fase.
+    // tag: Previa|Temario · TEST|Temario · DESARROLLO|Práctico|No temario|Méritos|Final
   ],
   "baremo": [ { "concepto": string, "detalle": string, "max": string } ] | null,  // solo caso 5
   "faltantes": [ string ]          // datos que no se pudieron extraer y habría que confirmar

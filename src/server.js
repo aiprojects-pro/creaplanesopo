@@ -31,9 +31,9 @@ const UPLOAD_DIR = path.join(__dirname, "..", "uploads");
 fs.mkdirSync(OUT_DIR, { recursive: true });
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
-// ---- Retención: los .docx/.pdf generados y los .txt temporales son
-// regenerables; se borran pasadas RETENTION_HOURS horas para que las carpetas
-// no crezcan sin límite. Barrido al arrancar y cada hora.
+// ---- Retención: SOLO los .txt subidos son temporales y se borran pasadas
+// RETENTION_HOURS. Los .docx/.pdf de outputs/ NO se borran: son el HISTÓRICO de
+// planes (persisten en el volumen). Barrido al arrancar y cada hora.
 const RETENTION_HOURS = Number(process.env.RETENTION_HOURS) || 48;
 function sweepOldFiles(dir) {
   const cutoff = Date.now() - RETENTION_HOURS * 3600 * 1000;
@@ -48,9 +48,25 @@ function sweepOldFiles(dir) {
     }
   });
 }
-function sweepAll() { sweepOldFiles(OUT_DIR); sweepOldFiles(UPLOAD_DIR); }
+function sweepAll() { sweepOldFiles(UPLOAD_DIR); }
 sweepAll();
 setInterval(sweepAll, 3600 * 1000).unref();
+
+// ---- Histórico de planes (append-only, JSONL persistido en outputs/) ----
+// Cada plan generado añade una línea con sus metadatos; se puede buscar por
+// mes/año. Al ser "append-only" no hay condición de carrera al escribir.
+const HISTORY_FILE = path.join(OUT_DIR, "history.jsonl");
+function appendHistory(entry) {
+  try { fs.appendFileSync(HISTORY_FILE, JSON.stringify(entry) + "\n"); }
+  catch (e) { console.warn("No se pudo escribir el histórico:", e.message); }
+}
+function readHistory() {
+  let raw = "";
+  try { raw = fs.readFileSync(HISTORY_FILE, "utf8"); } catch { return []; }
+  return raw.split("\n").filter(Boolean)
+    .map((l) => { try { return JSON.parse(l); } catch { return null; } })
+    .filter(Boolean);
+}
 
 const upload = multer({
   dest: UPLOAD_DIR,
@@ -128,9 +144,6 @@ app.post("/api/login", (req, res) => {
 app.post("/api/logout", (req, res) => req.session.destroy(() => res.json({ ok: true })));
 
 // Estáticos públicos (login) y protegidos (app)
-app.get("/api/health", (req, res) => {
-  res.json({ ok: true, service: "creaplanesopo" });
-});
 app.use("/login.html", express.static(path.join(__dirname, "..", "public", "login.html")));
 app.use(requireAuth);
 app.use(express.static(path.join(__dirname, "..", "public")));
@@ -175,6 +188,20 @@ app.post("/api/generar", upload.single("boletinFile"), async (req, res) => {
       console.warn("PDF no generado (¿LibreOffice instalado?):", e.message);
     }
 
+    // 6) Registrar en el histórico (buscable por mes/año)
+    const now = new Date();
+    appendHistory({
+      ts: now.toISOString(),
+      anio: now.getFullYear(),
+      mes: now.getMonth() + 1,
+      plaza: planData.conv.plaza || "(sin título)",
+      admin: planData.conv.admin || "",
+      caso: planData.caso,
+      modo,
+      docx: path.basename(docxPath),
+      pdf: pdfName,
+    });
+
     return res.json({
       ok: true,
       docx: path.basename(docxPath),
@@ -192,6 +219,20 @@ app.post("/api/generar", upload.single("boletinFile"), async (req, res) => {
     // Limpieza del upload temporal en TODAS las rutas (éxito, 400/422 y error).
     if (req.file) fs.unlink(req.file.path, () => {});
   }
+});
+
+// Histórico de planes: búsqueda por año y mes (ambos opcionales).
+// Devuelve también la lista de años disponibles para poblar el selector.
+app.get("/api/history", (req, res) => {
+  const items = readHistory();
+  const years = [...new Set(items.map((i) => i.anio))].sort((a, b) => b - a);
+  const year = req.query.year ? Number(req.query.year) : null;
+  const month = req.query.month ? Number(req.query.month) : null;
+  let filtered = items;
+  if (year) filtered = filtered.filter((i) => i.anio === year);
+  if (month) filtered = filtered.filter((i) => i.mes === month);
+  filtered = filtered.reverse(); // append-only → los más recientes primero
+  res.json({ years, total: filtered.length, items: filtered });
 });
 
 // Descarga de ficheros generados (solo autenticado)
