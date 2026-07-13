@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 <title>Planes de preparación · oposicionesdeporte.com</title>
 <style>
   :root { --cyan:#16A6D9; --navy:#0E3A4F; --ink:#1F2933; --grey:#6B7682; --line:#E3E8EC; --soft:#F2F8FB; }
@@ -48,7 +49,7 @@
 
   <label>Texto del boletín oficial</label>
   <textarea id="boletin" placeholder="Pega aquí el texto íntegro de la convocatoria (BOE, BOP, DOG, DOGV...)"></textarea>
-  <div class="hint">O sube un archivo .txt: <input type="file" id="file" accept=".txt,text/plain" /></div>
+  <div class="hint">O sube hasta 3 archivos .txt (p. ej. BOE + boletín provincial + autonómico): <input type="file" id="file" accept=".txt,text/plain" multiple /></div>
 
   <label>Observaciones del proceso (particularidades a tener en cuenta)</label>
   <textarea id="obs" style="min-height:100px" placeholder="Ej.: el práctico incluye lectura pública; la entrevista es eliminatoria; hay bolsa de 2 años; etc."></textarea>
@@ -76,21 +77,25 @@ async function logout(){ await fetch("/api/logout",{method:"POST"}); location.hr
 async function generar(){
   const boletin = document.getElementById("boletin").value.trim();
   const obs = document.getElementById("obs").value.trim();
-  const file = document.getElementById("file").files[0];
+  const files = document.getElementById("file").files;
   const res = document.getElementById("result");
   const go = document.getElementById("go");
   const spin = document.getElementById("spin");
   res.className = ""; res.innerHTML = "";
-  if (!boletin && !file){ res.className="show"; res.innerHTML='<span class="err">Pega el boletín o sube un .txt.</span>'; return; }
+  if (!boletin && files.length === 0){ res.className="show"; res.innerHTML='<span class="err">Pega el boletín o sube al menos un .txt.</span>'; return; }
+  if (files.length > 3){ res.className="show"; res.innerHTML='<span class="err">Máximo 3 archivos.</span>'; return; }
   go.disabled = true; spin.className="spinner show";
 
   try {
     const fd = new FormData();
-    if (file) fd.append("boletinFile", file); else fd.append("boletinTxt", boletin);
+    if (boletin) fd.append("boletinTxt", boletin);
+    for (const f of files) fd.append("boletinFiles", f);
     fd.append("observaciones", obs);
     fd.append("modo", modo);
     const r = await fetch("/api/generar", { method:"POST", body: fd });
-    const data = await r.json();
+    let data;
+    try { data = await r.json(); }
+    catch(_) { throw new Error("El servidor devolvió una respuesta inesperada (puede estar reiniciándose o el enlace no ser correcto). Inténtalo de nuevo en un momento."); }
     spin.className="spinner"; go.disabled=false; res.className="show";
     if (!r.ok){
       res.innerHTML = '<span class="err"><b>No se pudo generar:</b> '+(data.error||"error")+'</span>'

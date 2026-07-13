@@ -149,16 +149,38 @@ app.get("/api/health", (req, res) => {
   res.json({ ok: true, service: "creaplanesopo" });
 });
 
-// Estáticos públicos (login) y protegidos (app)
+// Estáticos públicos (login + favicon) y protegidos (app)
 app.use("/login.html", express.static(path.join(__dirname, "..", "public", "login.html")));
+app.use("/favicon.svg", express.static(path.join(__dirname, "..", "public", "favicon.svg")));
+app.get("/favicon.ico", (req, res) => res.redirect(301, "/favicon.svg"));
 app.use(requireAuth);
 app.use(express.static(path.join(__dirname, "..", "public")));
 
 // ---- Endpoint principal ----
-app.post("/api/generar", upload.single("boletinFile"), async (req, res) => {
+// Acepta texto pegado y/o hasta 3 archivos .txt (p. ej. BOE + boletín provincial
+// + autonómico). El wrapper convierte los errores de subida en JSON (si no,
+// multer devolvería HTML y el navegador vería "Unexpected token '<'").
+const subirBoletines = upload.array("boletinFiles", 3);
+app.post("/api/generar", (req, res, next) => {
+  subirBoletines(req, res, (err) => {
+    if (!err) return next();
+    const msg = err.code === "LIMIT_FILE_SIZE" ? "Algún archivo supera el límite de 2 MB."
+      : err.code === "LIMIT_UNEXPECTED_FILE" ? "Máximo 3 archivos."
+      : "No se pudieron subir los archivos.";
+    return res.status(400).json({ error: msg });
+  });
+}, async (req, res) => {
   try {
-    let boletinTxt = (req.body.boletinTxt || "").trim();
-    if (req.file) boletinTxt = fs.readFileSync(req.file.path, "utf8");
+    // Combina el texto pegado (si lo hay) y el contenido de cada archivo subido,
+    // etiquetando cada fuente para que la IA use TODA la información del proceso.
+    const partes = [];
+    const pegado = (req.body.boletinTxt || "").trim();
+    if (pegado) partes.push(pegado);
+    for (const f of (req.files || [])) {
+      const contenido = fs.readFileSync(f.path, "utf8").trim();
+      if (contenido) partes.push("=== DOCUMENTO: " + f.originalname + " ===\n" + contenido);
+    }
+    const boletinTxt = partes.join("\n\n");
     const observaciones = (req.body.observaciones || "").trim();
     const modo = req.body.modo === "captacion" ? "captacion" : "decision";
 
@@ -222,8 +244,8 @@ app.post("/api/generar", upload.single("boletinFile"), async (req, res) => {
     console.error(err);
     return res.status(500).json({ error: err.message || "Error interno", raw: err.raw });
   } finally {
-    // Limpieza del upload temporal en TODAS las rutas (éxito, 400/422 y error).
-    if (req.file) fs.unlink(req.file.path, () => {});
+    // Limpieza de los temporales subidos en TODAS las rutas (éxito, 400/422 y error).
+    for (const f of (req.files || [])) fs.unlink(f.path, () => {});
   }
 });
 

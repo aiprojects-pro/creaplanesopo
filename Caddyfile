@@ -6,9 +6,9 @@
 	# Reenvía todo el tráfico a la app (nombre de servicio "app" en la red de compose).
 	reverse_proxy app:3000
 
-	# Límite de tamaño de subida (el boletín es un .txt pequeño; 5 MB de margen).
+	# Límite de subida: hasta 3 .txt (BOE + provincial + autonómico). 10 MB de margen.
 	request_body {
-		max_size 5MB
+		max_size 10MB
 	}
 
 	# Cabeceras de seguridad básicas.

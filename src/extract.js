@@ -27,6 +27,7 @@ REGLAS DE NEGOCIO (autoritativas):
 ${REGLAS}
 
 INSTRUCCIONES DE SALIDA:
+- Puede que recibas VARIOS documentos oficiales del MISMO proceso (p. ej. BOE + boletín provincial/autonómico), separados por líneas "=== DOCUMENTO: ... ===". Combínalos y usa toda la información disponible: si un dato aparece en cualquiera de ellos, NO lo marques como faltante.
 - Responde ÚNICAMENTE con un objeto JSON válido. Sin markdown, sin \`\`\`, sin texto antes o después.
 - Si un dato no aparece en el boletín y no puedes inferirlo con seguridad, ponlo como null y añádelo al array "faltantes" con una nota de qué habría que preguntar.
 - NO calcules importes en euros: solo extrae nplazas, nº de temas y clasifica ejercicios/servicios. El sistema aplica los 23 €/tema, −10%, 495/396 €, etc.

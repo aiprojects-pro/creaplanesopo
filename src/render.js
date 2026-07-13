@@ -14,8 +14,8 @@ const fs = require("fs");
 const C = require(path.join(__dirname, "_common.js"));
 const {
   Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
-  WidthType, BorderStyle, AlignmentType, ShadingType, VerticalAlign, HeightRule, PageBreak,
-  CYAN, NAVY, INK, GREY, LINE, SOFT, WHITE, FONT,
+  WidthType, BorderStyle, AlignmentType, ShadingType, VerticalAlign, HeightRule, PageBreak, LineRuleType,
+  CYAN, NAVY, INK, GREY, LINE, SOFT, WHITE, FONT, dxa, cols,
   fmt, txt, p, spacer, img, ico, cell, noBorder, featureRow, chip,
   sectionHead, rule, tycLink, link, makeHeader, makeFooter, Header,
   cotalySection, cursosTransversales, BANCO_SUPUESTOS, SERVICIOS,
@@ -65,7 +65,7 @@ function priceCard(body, { tag, tagColor, titulo, sub, precioBruto, precioOferta
   if (precioBruto != null) precioRuns.push(txt(fmt(precioBruto) + "  ", { color: "BBD9E6", size: 24, strike: true }));
   precioRuns.push(txt(typeof precioOferta === "number" ? fmt(precioOferta) : precioOferta, { bold: true, color: WHITE, size: 38 }));
   body.push(new Table({
-    width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: [100], borders: noBorder,
+    width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: cols([100]), borders: noBorder,
     rows: [new TableRow({ children: [cell([
       p([txt(titulo, { bold: true, color: WHITE, size: 23 })], { after: 4, line: 270 }),
       ...(sub ? [p([txt(sub, { color: "D7ECF5", size: 17 })], { after: 10, line: 230 })] : []),
@@ -123,7 +123,7 @@ function temaList(body, titulo, temas) {
   temas.forEach((raw, i) => {
     const { num, text } = splitTemaNum(raw, i + 1);
     body.push(new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: [6, 94], borders: noBorder,
+      width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: cols([6, 94]), borders: noBorder,
       rows: [new TableRow({ children: [
         cell([p([txt(num, { bold: true, color: CYAN, size: 17 })], { after: 0, line: 220, align: A.CENTER })],
           { width: 6, fill: SOFT, valign: VerticalAlign.TOP, margins: { top: 40, bottom: 40, left: 20, right: 20 } }),
@@ -149,7 +149,7 @@ function bloqueCanales(body) {
   ], { width: 32, valign: VerticalAlign.TOP, fill: SOFT, margins: { top: 0, bottom: 140, left: 80, right: 80 } });
 
   body.push(new Table({
-    width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: [32, 2, 32, 2, 32], borders: noBorder,
+    width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: cols([32, 2, 32, 2, 32]), borders: noBorder,
     rows: [new TableRow({ height: { value: 3100, rule: HeightRule.ATLEAST }, children: [
       qrCard(NAVY, "Telegram", "qr_telegram.png", new Paragraph({ alignment: A.CENTER, spacing: { after: 0, before: 80 }, children: [link(URLS.telegram, "Unirse a Telegram", { size: 15 })] })),
       cell([p([], { after: 0 })], { width: 2, margins: { top: 0, bottom: 0, left: 0, right: 0 } }),
@@ -161,7 +161,7 @@ function bloqueCanales(body) {
   body.push(spacer(180));
 
   body.push(new Table({
-    width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: [100], borders: noBorder,
+    width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: cols([100]), borders: noBorder,
     rows: [new TableRow({ children: [cell([
       p([txt("Dudas e información", { bold: true, color: NAVY, size: 22 })], { after: 10, line: 260 }),
       new Paragraph({ spacing: { after: 6, line: 280 }, children: [img("wa_business.png", 24, 24), txt("   WhatsApp Business  ", { bold: true, color: INK, size: 21 }), txt(URLS.telefono, { bold: true, color: CYAN, size: 26 })] }),
@@ -297,7 +297,7 @@ function seccionProceso(body, planData, titulo, intro) {
     // secuencial para no romper la maqueta; el nombre de la fase ya va en fase.t.
     const nDisp = /^\s*\d{1,3}\s*$/.test(String(fase.n || "")) ? String(fase.n).trim() : String(i + 1);
     body.push(new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: [7, 68, 25], borders: noBorder,
+      width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: cols([7, 68, 25]), borders: noBorder,
       rows: [new TableRow({ children: [
         cell([p([txt(nDisp, { bold: true, color: CYAN, size: 26 })], { after: 0, line: 280 })], { width: 7, valign: VerticalAlign.TOP, margins: { top: 30, bottom: 30, left: 0, right: 40 } }),
         cell([p([txt(fase.t, { bold: true, color: NAVY, size: 20 })], { after: 8, line: 240 }), p([txt(fase.d, { color: GREY, size: 18 })], { after: 0, line: 240 })], { width: 68, margins: { top: 30, bottom: 30, left: 0, right: 60 } }),
@@ -313,7 +313,7 @@ function portadaDecision(body, planData) {
   const conv = planData.conv, t = planData.temario || {};
   body.push(spacer(60));
   body.push(p([txt("PLAN DE PREPARACIÓN", { bold: true, color: CYAN, size: 24, caps: true })], { after: 50 }));
-  body.push(p([txt(conv.plaza, { bold: true, color: NAVY, size: 48 })], { after: 40, line: 300 }));
+  body.push(p([txt(conv.plaza, { bold: true, color: NAVY, size: 48 })], { after: 40, line: 620, lineRule: LineRuleType.AT_LEAST }));
   body.push(p([txt(conv.admin, { color: GREY, size: 24 })], { after: 160 }));
   const datos = [
     ["Plazas", (conv.nplazas || "—") + " · " + (conv.regimen || "—")],
@@ -330,7 +330,7 @@ function portadaDecision(body, planData) {
     ], { width: 33, fill: SOFT, margins: { top: 120, bottom: 120, left: 140, right: 120 } })) }));
   }
   body.push(new Table({
-    width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: [33, 34, 33],
+    width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: cols([33, 34, 33]),
     borders: { ...noBorder, insideHorizontal: { style: BorderStyle.SINGLE, color: WHITE, size: 16 }, insideVertical: { style: BorderStyle.SINGLE, color: WHITE, size: 16 } },
     rows: dRows,
   }));
@@ -358,7 +358,7 @@ function buildDecision(planData, precios) {
       body.push(p([txt("El temario consta de ", { color: INK, size: 20 }), txt(total + " temas", { bold: true, color: NAVY, size: 20 }),
         txt(": un temario general (" + ng + " temas) y un temario específico (" + ne + " temas).", { color: INK, size: 20 })], { after: 140, line: 264 }));
       body.push(new Table({
-        width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: [49, 2, 49], borders: noBorder,
+        width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: cols([49, 2, 49]), borders: noBorder,
         rows: [new TableRow({ children: [
           cell([p([txt("Temario general · " + ng + " temas", { bold: true, color: CYAN, size: 17, caps: true })], { after: 40, line: 230 }), p([txt(resumenBloque(conv.resumenGeneral, t.temasGeneral, "general"), { color: GREY, size: 18 })], { after: 0, line: 240 })], { width: 49, fill: SOFT, margins: { top: 120, bottom: 120, left: 140, right: 120 } }),
           cell([p([], { after: 0 })], { width: 2, margins: { top: 0, bottom: 0, left: 0, right: 0 } }),
@@ -372,7 +372,7 @@ function buildDecision(planData, precios) {
       const totalUnico = temas.length || t.ntemas || 0;
       body.push(p([txt("El temario consta de ", { color: INK, size: 20 }), txt(totalUnico + " temas", { bold: true, color: NAVY, size: 20 }), txt(".", { color: INK, size: 20 })], { after: 140, line: 264 }));
       body.push(new Table({
-        width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: [100], borders: noBorder,
+        width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: cols([100]), borders: noBorder,
         rows: [new TableRow({ children: [
           cell([
             p([txt("Temario · " + totalUnico + " temas", { bold: true, color: CYAN, size: 17, caps: true })], { after: 40, line: 230 }),
@@ -442,12 +442,12 @@ function buildCaptacion(planData, precios) {
   // Portada con gancho
   body.push(spacer(80));
   body.push(p([txt("¿QUIERES TU PLAZA DE", { bold: true, color: CYAN, size: 22, caps: true })], { after: 20 }));
-  body.push(p([txt(conv.plaza + "?", { bold: true, color: NAVY, size: 46 })], { after: 40, line: 300 }));
+  body.push(p([txt(conv.plaza + "?", { bold: true, color: NAVY, size: 46 })], { after: 40, line: 620, lineRule: LineRuleType.AT_LEAST }));
   body.push(p([txt(conv.admin, { color: GREY, size: 22 })], { after: 200 }));
   // 3 claims
   const claims = [["2017", "Preparando opositores del deporte desde 2017"], ["73%", "de aprobados en nuestros procesos"], ["1 a 1", "Preparador funcionario en activo, +15 años"]];
   body.push(new Table({
-    width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: [33, 33, 34], borders: noBorder,
+    width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: cols([33, 33, 34]), borders: noBorder,
     rows: [new TableRow({ children: claims.map(([big, small]) => cell([
       p([txt(big, { bold: true, color: CYAN, size: 44 })], { after: 6, align: A.CENTER, line: 480 }),
       p([txt(small, { color: GREY, size: 17 })], { after: 0, align: A.CENTER, line: 230 }),

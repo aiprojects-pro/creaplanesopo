@@ -8,7 +8,7 @@ const fs = require("fs");
 const {
   Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
   WidthType, BorderStyle, AlignmentType, ShadingType, VerticalAlign,
-  ImageRun, ExternalHyperlink, HeightRule, Header, Footer, TabStopType, PageBreak,
+  ImageRun, ExternalHyperlink, HeightRule, Header, Footer, TabStopType, PageBreak, LineRuleType,
 } = require("docx");
 
 // ---------- Paleta y fuente ----------
@@ -16,6 +16,14 @@ const CYAN = "16A6D9", NAVY = "0E3A4F", INK = "1F2933";
 const GREY = "6B7682", LINE = "E3E8EC", SOFT = "F2F8FB", WHITE = "FFFFFF";
 const FONT = "Calibri";
 const A = AlignmentType;
+
+// Ancho útil de página (12240 − 1440×2). Las tablas se miden en DXA (medida
+// fija) en lugar de porcentaje: Word y Google Docs renderizan mal la rejilla de
+// columnas en % (LibreOffice la tolera). dxa() convierte un % a DXA; cols() una
+// fila de %.
+const CONTENT_W = 9360;
+const dxa = (pct) => Math.max(1, Math.round((pct / 100) * CONTENT_W));
+const cols = (arr) => arr.map(dxa);
 
 // ---------- Paleta de marca COTALY (la plataforma de estudio) ----------
 // Identidad propia de Cotaly (cotaly.app). Se usa SOLO dentro de la sección
@@ -47,7 +55,7 @@ function txt(text, o = {}) {
 }
 function p(children, o = {}) {
   return new Paragraph({ children:Array.isArray(children)?children:[children],
-    alignment:o.align, spacing:{ before:o.before??0, after:o.after??120, line:o.line??264 },
+    alignment:o.align, spacing:{ before:o.before??0, after:o.after??120, line:o.line??264, ...(o.lineRule?{lineRule:o.lineRule}:{}) },
     ...(o.border?{border:o.border}:{}), ...(o.indent?{indent:o.indent}:{}),
     ...(o.pageBreakBefore?{pageBreakBefore:true}:{}) });
 }
@@ -57,7 +65,7 @@ const cellBorders = { top:{style:BorderStyle.SINGLE,size:4,color:LINE},bottom:{s
 
 function cell(children, o = {}) {
   return new TableCell({
-    width:{ size:o.width!=null?o.width:o.w, type:o.width!=null?WidthType.PERCENTAGE:WidthType.DXA },
+    width:{ size:o.width!=null?dxa(o.width):o.w, type:WidthType.DXA },
     borders:o.borders||noBorder,
     shading:o.fill?{ fill:o.fill, type:ShadingType.CLEAR, color:"auto" }:undefined,
     margins:o.margins||{ top:80, bottom:80, left:120, right:120 },
@@ -78,7 +86,7 @@ function tycLink(o = {}) {
 
 // ---------- Encabezado de sección (icono + título + regla) ----------
 function sectionHead(iconName, title) {
-  return new Table({ width:{size:100,type:WidthType.PERCENTAGE}, borders:noBorder, columnWidths:[7,93],
+  return new Table({ width:{size:100,type:WidthType.PERCENTAGE}, borders:noBorder, columnWidths:cols([7,93]),
     rows:[ new TableRow({ children:[
       cell([ p([ico(iconName+"_cyan", 26)], {after:0}) ], { width:7, valign:VerticalAlign.CENTER, margins:{top:0,bottom:0,left:0,right:80} }),
       cell([ new Paragraph({ spacing:{after:0, line:300},
@@ -97,7 +105,7 @@ function chip(text, color = CYAN) {
 
 // ---------- Fila de característica (icono + título + desc) ----------
 function featureRow(iconName, title, desc) {
-  return new Table({ width:{size:100,type:WidthType.PERCENTAGE}, borders:noBorder, columnWidths:[7,93],
+  return new Table({ width:{size:100,type:WidthType.PERCENTAGE}, borders:noBorder, columnWidths:cols([7,93]),
     rows:[ new TableRow({ children:[
       cell([ p([ico(iconName+"_cyan", 22)], {after:0, line:240}) ], { width:7, valign:VerticalAlign.TOP, margins:{top:30,bottom:30,left:0,right:60} }),
       cell([ p([txt(title,{bold:true,color:NAVY,size:20})], {after:10, line:240}),
@@ -323,13 +331,13 @@ function cotalyHead(title, sub) {
       children:[ txt(title,{bold:true,color:COT_NAVY,size:32}), txt("  ·  ",{color:COT_CORAL,size:30,bold:true}), txt(sub,{color:COT_TEAL,size:24,bold:true}) ] })
   ], { width:mk?92:100, valign:VerticalAlign.CENTER });
   return new Table({ width:{size:100,type:WidthType.PERCENTAGE}, borders:noBorder,
-    columnWidths: mk?[8,92]:[100],
+    columnWidths: mk?cols([8,92]):cols([100]),
     rows:[ new TableRow({ children: mk?[left,titleCell]:[titleCell] }) ] });
 }
 
 // Fila de característica con bullet coral (identidad Cotaly).
 function cotalyFeature(title, desc) {
-  return new Table({ width:{size:100,type:WidthType.PERCENTAGE}, borders:noBorder, columnWidths:[5,95],
+  return new Table({ width:{size:100,type:WidthType.PERCENTAGE}, borders:noBorder, columnWidths:cols([5,95]),
     rows:[ new TableRow({ children:[
       cell([ p([txt("●",{color:COT_CORAL,size:18})], {after:0, line:240}) ], { width:5, valign:VerticalAlign.TOP, margins:{top:34,bottom:30,left:0,right:40} }),
       cell([ p([txt(title,{bold:true,color:COT_NAVY,size:20})], {after:8, line:240}),
@@ -347,7 +355,7 @@ function cotalySection(body, opts = {}) {
   body.push(cotalyHead(COTALY.nombre, COTALY.claim));
   body.push(spacer(80));
   // Banda de marca con el claim y, si procede, etiqueta "incluido".
-  body.push(new Table({ width:{size:100,type:WidthType.PERCENTAGE}, columnWidths:[100], borders:noBorder,
+  body.push(new Table({ width:{size:100,type:WidthType.PERCENTAGE}, columnWidths:cols([100]), borders:noBorder,
     rows:[ new TableRow({ children:[ cell([
       ...(incluida?[ new Paragraph({ spacing:{after:60,line:220}, children:[ txt("INCLUIDO CON LA PREPARACIÓN COMPLETA",{bold:true,color:COT_TEALL,size:15,caps:true}) ] }) ]:[]),
       p([txt(COTALY.intro,{color:WHITE,size:20})], {after:0, line:276}),
@@ -363,8 +371,8 @@ function cotalySection(body, opts = {}) {
 
 module.exports = {
   Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, BorderStyle,
-  AlignmentType, ShadingType, VerticalAlign, ExternalHyperlink, HeightRule, ImageRun, PageBreak, Header, Footer, TabStopType,
-  CYAN, NAVY, INK, GREY, LINE, SOFT, WHITE, FONT,
+  AlignmentType, ShadingType, VerticalAlign, ExternalHyperlink, HeightRule, ImageRun, PageBreak, Header, Footer, TabStopType, LineRuleType,
+  CYAN, NAVY, INK, GREY, LINE, SOFT, WHITE, FONT, CONTENT_W, dxa, cols,
   COT_NAVY, COT_TEAL, COT_TEALL, COT_CORAL, COT_LIGHT,
   fmt, txt, p, spacer, img, ico, cell, cellBorders, noBorder, featureRow, chip,
   sectionHead, rule, tycLink, link, makeHeader, makeFooter,
