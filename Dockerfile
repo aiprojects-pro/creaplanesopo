@@ -8,7 +8,8 @@ FROM node:20-bookworm-slim
 # LibreOffice headless + fuentes + Python + cairosvg (para make_icons.py).
 # make_icons.py renderiza los iconos SVG->PNG con cairosvg, que necesita la
 # librería nativa libcairo2. (No usa Pillow.)
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN echo 'Acquire::ForceIPv4 "true";' > /etc/apt/apt.conf.d/99force-ipv4 \
+    && apt-get update && apt-get install -y --no-install-recommends \
       libreoffice-writer \
       fonts-crosextra-carlito \
       python3 python3-pip \
