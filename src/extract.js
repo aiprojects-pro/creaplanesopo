@@ -33,6 +33,7 @@ INSTRUCCIONES DE SALIDA:
 - NO calcules importes en euros: solo extrae nplazas, nº de temas y clasifica ejercicios/servicios. El sistema aplica los 23 €/tema, −10%, 495/396 €, etc.
 - En "fases", el campo "n" es SOLO el número de orden ("1", "2", "3"…); el nombre del ejercicio va en "t". Nunca pongas "Ejercicio 1", "Fase previa", "Oposición", etc. en "n".
 - En los temarios, copia el enunciado de cada tema SIN su número inicial (quita "1.", "Tema 1.", "1)"…): el sistema los numera automáticamente.
+- PRÁCTICO vs SUPUESTOS: si el proceso tiene CUALQUIER ejercicio práctico (prueba práctica, supuesto práctico, caso práctico, prueba teórico-práctica), marca flags.practico=true (NUNCA flags.supuestos). flags.supuestos es solo el servicio de supuestos sueltos por horas, que no aparece en el boletín: déjalo en false salvo indicación expresa del operador.
 - IDIOMA DEL PLAN: redacta el contenido descriptivo que extraes (enunciados de temas, nombres y descripciones de fases, resúmenes) en el idioma que el operador indique en OBSERVACIONES; si no indica ninguno, en ESPAÑOL (traduce si el boletín está en otra lengua, p. ej. catalán/gallego/valenciano/euskera). Mantén SIN traducir cifras, fechas, referencias oficiales (BOE/BOP/DOGC…) y nombres propios. Rellena conv.idioma con ese idioma ("Español" por defecto).
 - TEMARIO: refleja la estructura del boletín. Si distingue temario general/común y específico, reparte en temasGeneral y temasEspecifico. Si NO lo distingue, pon TODOS los temas en un único array y deja el otro vacío (el sistema lo etiquetará simplemente como "Temario").
 - ntemas es el TOTAL de temas y debe COINCIDIR con la suma de los temas generales + específicos (no pongas solo el de un bloque).
@@ -60,8 +61,8 @@ Esquema JSON EXACTO que debes devolver:
     "test": boolean,
     "desarrollo": boolean,
     "lectura": boolean,
-    "supuestos": boolean,
-    "practico": boolean
+    "supuestos": boolean,          // SOLO servicio de supuestos sueltos por horas; casi siempre false. Un ejercicio práctico del proceso NO es esto.
+    "practico": boolean            // true si el proceso tiene CUALQUIER ejercicio práctico (prueba práctica, supuesto/caso práctico, teórico-práctica)
   },
   "temario": {
     "tieneTemario": boolean,

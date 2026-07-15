@@ -6,7 +6,7 @@ convocatoria. Si cambian las reglas, se edita este fichero.)
 ## Clasificación de ejercicios de la fase de oposición
 1. **Tipo test** → es de temario. Marca flags.test.
 2. **Desarrollo escrito** (desarrollar temas por escrito) → es de temario. Marca flags.desarrollo.
-3. **Práctico / teórico-práctico / supuestos prácticos** → servicio independiente de pago. Marca flags.practico (o flags.supuestos si son supuestos sueltos por horas).
+3. **Práctico / teórico-práctico / supuesto o caso práctico** (cualquier ejercicio práctico del proceso) → **SIEMPRE flags.practico** (servicio de 495/396 €). NO uses flags.supuestos para esto. `flags.supuestos` es SOLO el servicio de supuestos sueltos por horas (149 €/h), que no aparece en el boletín: déjalo en false salvo indicación expresa del operador.
 4. **NO de temario**: idioma (gallego/CELGA, catalán, valenciano, euskera…), prueba física, psicotécnico, reconocimiento médico, entrevista. Se MENCIONAN en las fases con tag "No temario", pero NO se cobran ni se preparan.
 
 ## Los cinco casos
@@ -25,7 +25,7 @@ A cualquier caso se le pueden sumar ejercicios no-temario (idioma, físico...).
 |---|---|
 | Test y/o desarrollo escrito | `temario` (+ `temasSueltos`) |
 | Ejercicio práctico dentro de la oposición | `practico` |
-| Solo supuestos prácticos sueltos por horas | `supuestos` |
+| Supuestos sueltos por horas (solo si NO hay ejercicio práctico en el proceso; raro) | `supuestos` |
 | Fase de concurso de méritos | `concurso` (servicioMeritos="concurso") |
 | Bolsa de empleo | `bolsa` (servicioMeritos="bolsa") |
 | Libre designación | `libreDesig` (servicioMeritos="libreDesig") |

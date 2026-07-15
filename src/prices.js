@@ -19,6 +19,17 @@ function computePrices(planData) {
   const t = planData.temario || {};
   const out = { fmt };
 
+  // Salvaguarda de clasificación: si el PROCESO tiene un ejercicio práctico
+  // (prueba práctica, supuesto/caso práctico, teórico-práctica), es "practico"
+  // (495/396 €), NO "supuestos sueltos" (149 €/h). Corrige el error típico del
+  // modelo de marcar supuestos en vez de practico → así no sale la tarjeta de 149 €.
+  const f = planData.flags || (planData.flags = {});
+  const ejercicios = (planData.conv && planData.conv.ejercicios) || "";
+  if (f.supuestos && !f.practico && /práctic|supuesto|caso\s+práctic|teórico[- ]?práctic/i.test(ejercicios)) {
+    f.practico = true;
+    f.supuestos = false;
+  }
+
   // Teórico (solo si hay temario)
   if (t.tieneTemario && t.ntemas) {
     const bruto = t.ntemas * PRECIO_TEMA;
@@ -36,7 +47,6 @@ function computePrices(planData) {
   }
 
   // Práctico
-  const f = planData.flags || {};
   if (f.practico) {
     out.practico = {
       full: PRACT_FULL, desc: PRACT_DESC,

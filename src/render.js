@@ -186,7 +186,7 @@ function tarjetasOpciones(body, planData, precios) {
   if (precios.teorico) {
     const cursos = cursosTransversales(f);
     const feats = [
-      ["doc", "Temario específico de esta convocatoria", "Hecho a medida para este proceso" + (f.desarrollo ? " (versión test y desarrollo)" : " (versión test)") + " y entregado en un plazo aproximado de un mes desde la contratación, en PDF descargable desde el aula virtual."],
+      ["doc", "Temario específico de esta convocatoria", "Hecho a medida para este proceso (en versión test" + (f.desarrollo ? " y desarrollo" : "") + "). Tras la contratación, se subirá gradualmente al aula virtual en PDF descargable, completándose en un plazo aproximado de un mes."],
       ["chat", "Consultas con tu preparador por chat", "Resuelve tus dudas con el preparador, de forma individualizada, en cualquier momento de la preparación."],
       ["test", "Exámenes tipo test en la plataforma", "Baterías de preguntas y simulacros específicos para este proceso, además de exámenes de procesos anteriores."],
       ["audio", "Audio por tema", "Cada tema en audio descargable para repasar en cualquier momento."],
