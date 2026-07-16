@@ -143,8 +143,8 @@ app.post("/api/login", (req, res) => {
 });
 app.post("/api/logout", (req, res) => req.session.destroy(() => res.json({ ok: true })));
 
-// Healthcheck público para OpenShift. Debe ir antes de requireAuth para que
-// readiness/liveness no fallen con 401 cuando no hay sesión.
+// Healthcheck publico para OpenShift. Debe ir antes de requireAuth para que
+// readiness/liveness no fallen con 401 cuando no hay sesion.
 app.get("/api/health", (req, res) => {
   res.json({ ok: true, service: "creaplanesopo" });
 });

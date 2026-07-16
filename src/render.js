@@ -188,14 +188,18 @@ function tarjetasOpciones(body, planData, precios) {
     const feats = [
       ["doc", "Temario específico de esta convocatoria", "Hecho a medida para este proceso (en versión test" + (f.desarrollo ? " y desarrollo" : "") + "). Tras la contratación, se subirá gradualmente al aula virtual en PDF descargable, completándose en un plazo aproximado de un mes."],
       ["chat", "Consultas con tu preparador por chat", "Resuelve tus dudas con el preparador, de forma individualizada, en cualquier momento de la preparación."],
-      ["test", "Exámenes tipo test en la plataforma", "Baterías de preguntas y simulacros específicos para este proceso, además de exámenes de procesos anteriores."],
+      ["test", "Exámenes tipo test en la plataforma", "Baterías de preguntas y simulacro tipo test específicos para este proceso, además de exámenes reales de procesos selectivos de la misma categoría profesional."],
       ["audio", "Audio por tema", "Cada tema en audio descargable para repasar en cualquier momento."],
       ["stack", "Acceso a los cursos transversales", "Incluye el acceso a otros cursos transversales de la plataforma: " + cursos.join(" · ") + "."],
       ["tool", "Cotaly · tu plataforma de estudio", "Plan, temario, simulacros y tu preparador en un solo sitio (ver sección dedicada). Gratis 3 meses desde la activación."],
     ];
     if (planData.conv.cooficial) feats.push(["stack", "Idioma a elegir: castellano o " + planData.conv.lenguaCooficial, "Eliges el idioma del temario; se entrega en un solo idioma, no en ambos."]);
+    // El título deja claro que cubre la parte teórica (el práctico va aparte):
+    // "examen teórico" si hay un solo ejercicio teórico; "ejercicios teóricos" si hay dos (test + desarrollo).
+    const nTeo = (f.test ? 1 : 0) + (f.desarrollo ? 1 : 0);
+    const tituloCompleta = "Preparación completa " + (nTeo >= 2 ? "ejercicios teóricos" : "examen teórico");
     priceCard(body, {
-      tag: "Recomendada", tagColor: NAVY, titulo: "Preparación completa",
+      tag: "Recomendada", tagColor: NAVY, titulo: tituloCompleta,
       sub: "Los " + precios.teorico.ntemas + " temas + aula virtual + preparador",
       precioBruto: precios.teorico.bruto, precioOferta: precios.teorico.oferta, ofertaNota: "pago único · 10% dto.",
       intro: "Preparas a fondo el temario específico de esta convocatoria, hecho a medida, con el acompañamiento del preparador.",
