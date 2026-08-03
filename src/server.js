@@ -143,6 +143,10 @@ app.post("/api/login", (req, res) => {
 });
 app.post("/api/logout", (req, res) => req.session.destroy(() => res.json({ ok: true })));
 
+// Healthcheck público para las probes de OpenShift. Debe vivir antes de
+// requireAuth; si devuelve 401, Kubernetes deja el pod fuera de servicio.
+app.get("/api/health", (req, res) => res.json({ ok: true, uptime: process.uptime() }));
+
 // Estáticos públicos (login + favicon) y protegidos (app)
 app.use("/login.html", express.static(path.join(__dirname, "..", "public", "login.html")));
 app.use("/favicon.svg", express.static(path.join(__dirname, "..", "public", "favicon.svg")));
