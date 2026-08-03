@@ -57,6 +57,25 @@ const URLS = {
   email: "info@oposicionesdeporte.com",
 };
 
+// Estadísticas de marca FIJAS para todos los planes (por el momento).
+const STATS = [
+  ["+900", "opositores preparados desde 2017"],
+  ["73 %", "de aprobados sobre presentados"],
+  ["1 a 1", "con tu preparador"],
+];
+const LEMA = "Preparación personalizada, de principio a fin, con un preparador que te guía en cada fase del proceso. Tú estudias; nosotros nos encargamos del resto.";
+const NOTA_STATS = "Dato global de aprobados sobre presentados en todas las convocatorias preparadas desde 2017.";
+
+// Encabezado ligero de subsección (texto en negrita + regla fina), para las
+// secciones "Descuentos…" y "Resumen de precios" (más discretas que sectionHead).
+function subHead(body, titulo) {
+  body.push(new Paragraph({
+    spacing: { before: 60, after: 120, line: 260 },
+    border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: LINE, space: 4 } },
+    children: [txt(titulo, { bold: true, color: NAVY, size: 24 })],
+  }));
+}
+
 // -------- priceCard: banda de precio de color + features (igual que la skill) --------
 function priceCard(body, { tag, tagColor, titulo, sub, precioBruto, precioOferta, ofertaNota, intro, features }) {
   body.push(chip(tag, tagColor));
@@ -179,10 +198,11 @@ function bloqueCanales(body) {
 }
 
 // -------- Tarjetas de "Cómo prepararte" según el caso (comparten priceCard) --------
+// Orden: completa → temas sueltos → práctico/supuestos → méritos → tutorías → pack.
 function tarjetasOpciones(body, planData, precios) {
   const f = planData.flags || {};
 
-  // Preparación completa (temario) — recomendada
+  // 1) Preparación completa (temario) — recomendada + temas sueltos
   if (precios.teorico) {
     const cursos = cursosTransversales(f);
     const feats = [
@@ -191,35 +211,70 @@ function tarjetasOpciones(body, planData, precios) {
       ["test", "Exámenes tipo test en la plataforma", "Baterías de preguntas y simulacro tipo test específicos para este proceso, además de exámenes reales de procesos selectivos de la misma categoría profesional."],
       ["audio", "Audio por tema", "Cada tema en audio descargable para repasar en cualquier momento."],
       ["stack", "Acceso a los cursos transversales", "Incluye el acceso a otros cursos transversales de la plataforma: " + cursos.join(" · ") + "."],
-      ["tool", "Cotaly · tu plataforma de estudio", "Plan, temario, simulacros y tu preparador en un solo sitio (ver sección dedicada). Gratis 3 meses desde la activación."],
     ];
     if (planData.conv.cooficial) feats.push(["stack", "Idioma a elegir: castellano o " + planData.conv.lenguaCooficial, "Eliges el idioma del temario; se entrega en un solo idioma, no en ambos."]);
     // El título deja claro que cubre la parte teórica (el práctico va aparte):
     // "examen teórico" si hay un solo ejercicio teórico; "ejercicios teóricos" si hay dos (test + desarrollo).
     const nTeo = (f.test ? 1 : 0) + (f.desarrollo ? 1 : 0);
     const tituloCompleta = "Preparación completa " + (nTeo >= 2 ? "ejercicios teóricos" : "examen teórico");
+    const teoParts = [f.test ? "test" : null, f.desarrollo ? "desarrollo" : null].filter(Boolean).join(" + ");
     priceCard(body, {
       tag: "Recomendada", tagColor: NAVY, titulo: tituloCompleta,
-      sub: "Los " + precios.teorico.ntemas + " temas + aula virtual + preparador",
+      sub: "Los " + precios.teorico.ntemas + " temas" + (teoParts ? " (" + teoParts + ")" : "") + " + aula virtual + preparador",
       precioBruto: precios.teorico.bruto, precioOferta: precios.teorico.oferta, ofertaNota: "pago único · 10% dto.",
-      intro: "Preparas a fondo el temario específico de esta convocatoria, hecho a medida, con el acompañamiento del preparador.",
+      intro: "Preparas a fondo la parte teórica con el temario específico de esta convocatoria, hecho a medida, y el acompañamiento del preparador.",
       features: feats,
     });
 
-    // Temas sueltos
+    // Temas sueltos — "Empieza probando"
     priceCard(body, {
-      tag: "También puedes", tagColor: CYAN, titulo: "Temas sueltos a medida",
+      tag: "Empieza probando", tagColor: CYAN, titulo: "Temas sueltos a medida",
       sub: "Elige solo los temas que necesitas",
       precioBruto: null, precioOferta: precios.temasSueltos.precioTema, ofertaNota: "por tema · solo versión test · sin permanencia",
-      intro: "Pensados para ver un tema antes de contratar la preparación completa. Su importe se descuenta del total (acumulativo) si luego contratas la completa.",
+      intro: "Pensados para ver un tema antes de contratar la preparación completa: funcionan como prueba de nuestra forma de trabajar.",
       features: [
         ["doc", "Tema a medida en PDF", "Redactado para el ejercicio tipo test, conforme al temario oficial de esta plaza."],
         ["check", "Sin permanencia", "Pago por tema, sin compromisos. Mismo estándar que la preparación completa."],
+        ["euro", "Su importe se descuenta del total", "Lo que pagues por temas sueltos se descuenta del precio de la preparación completa si después la contratas (acumulativo)."],
       ],
     });
   }
 
-  // Méritos (caso 5)
+  // 2) Práctico / supuestos (justo tras la parte teórica)
+  if (precios.practico) {
+    // Etiqueta según el ordinal del ejercicio práctico en el proceso ("Tercer
+    // ejercicio"…), tomado del título de su fase; si no, "Ejercicio práctico".
+    const fasePr = (planData.fases || []).find((x) => /práctic/i.test(x.tag || ""));
+    const tagPr = (fasePr && fasePr.t && fasePr.t.includes("·")) ? fasePr.t.split("·")[0].trim() : "Ejercicio práctico";
+    priceCard(body, {
+      tag: tagPr, tagColor: NAVY, titulo: "Preparación del ejercicio práctico",
+      sub: "Metodología, tipología de supuestos y recursos",
+      precioBruto: precios.practico.full, precioOferta: precios.practico.desc,
+      ofertaNota: fmt(precios.practico.desc) + " si preparas la teoría con nosotros (−20%) · " + fmt(precios.practico.full) + " por separado",
+      intro: "Preparamos el ejercicio práctico con metodología, ejemplos reales y recursos de apoyo.",
+      features: [
+        ["target", "Tipología de supuestos", "Ejemplos y tipos de supuestos prácticos relacionados con las funciones del puesto."],
+        ["info", "Construcción de hipótesis", "Cómo plantear y anticipar posibles supuestos del tribunal."],
+        ["check", "Metodología de resolución", "Sistemática de planteamiento, desarrollo y conclusiones."],
+        ["tool", "Recursos en vídeo", "Clases grabadas y documentos de referencia para justificar el desarrollo."],
+        ["stack", BANCO_SUPUESTOS, "Acceso al " + BANCO_SUPUESTOS + " en la plataforma, para entrenar con casos a medida."],
+      ],
+    });
+    body.push(p([txt("Se contrata tras superar el ejercicio anterior. No admite pago fraccionado.", { color: GREY, size: 18, italics: true })], { after: 0 }));
+  } else if (precios.supuestos) {
+    priceCard(body, {
+      tag: "Supuestos prácticos", tagColor: NAVY, titulo: "Supuestos prácticos",
+      sub: "Propuesta y corrección personalizada por hora",
+      precioBruto: null, precioOferta: precios.supuestos.hora, ofertaNota: "por hora",
+      intro: "Un preparador te propone un supuesto práctico a medida y corrige tu resolución.",
+      features: [
+        ["check", "Corrección personalizada", "Vía aula virtual, con feedback individualizado."],
+        ["stack", BANCO_SUPUESTOS, "Acceso al " + BANCO_SUPUESTOS + " en la plataforma."],
+      ],
+    });
+  }
+
+  // 3) Méritos (caso 5)
   if (precios.meritos) {
     const nombre = SERVICIOS[planData.servicioMeritos]?.nombre || "Preparación de la documentación";
     priceCard(body, {
@@ -234,9 +289,9 @@ function tarjetasOpciones(body, planData, precios) {
     });
   }
 
-  // Tutorías (SIEMPRE)
+  // 4) Tutorías — "Solo acompañamiento"
   priceCard(body, {
-    tag: "También puedes · Solo tutorías", tagColor: CYAN, titulo: "Tutorías individuales",
+    tag: "Solo acompañamiento", tagColor: CYAN, titulo: "Tutorías individuales",
     sub: "Acompañamiento con el preparador, sin necesidad de la preparación completa",
     precioBruto: null, precioOferta: precios.tutoria.hora, ofertaNota: "por hora · sesión individual uno a uno",
     intro: "El preparador es funcionario en activo, con más de 15 años preparando opositores. Puedes contratar una sola sesión de prueba, sin compromiso.",
@@ -245,46 +300,19 @@ function tarjetasOpciones(body, planData, precios) {
       ["chat", "A tu ritmo", "Resuelve dudas, planifica el estudio o repasa los contenidos que necesites."],
     ],
   });
+
+  // 5) Pack Intensivo
   priceCard(body, {
     tag: "El más completo · ahorro", tagColor: NAVY, titulo: "Pack Intensivo de tutorías individuales",
-    sub: "5 sesiones de 30 min + revisión de méritos + acompañamiento por chat",
+    sub: "5 sesiones de 30 min + repaso guiado + acompañamiento por chat",
     precioBruto: null, precioOferta: precios.packIntensivo.precio, ofertaNota: "ahorras casi 40 € frente a las sesiones sueltas",
-    intro: "Un paquete cerrado para trabajar de forma continuada con el preparador. Si vienes de una sesión individual de 1 h, pagas " + precios.packIntensivo.trasSesionFmt + " y te quedan 3 sesiones de 30 min.",
+    intro: "Un paquete cerrado para trabajar de forma continuada con el preparador y reforzar los puntos donde más lo necesites. Si vienes de una sesión individual de 1 h, pagas " + precios.packIntensivo.trasSesionFmt + " y te quedan 3 sesiones de 30 min.",
     features: [
       ["calendar", "5 sesiones de 30 minutos", "Cinco tutorías individuales para avanzar de forma guiada y constante."],
-      ["scale", "Revisión de méritos", "Análisis de tu baremo de méritos para la fase de concurso."],
+      ["scale", "Repaso guiado", "Trabajo enfocado sobre los temas, el desarrollo escrito o los supuestos prácticos que más se te resistan."],
       ["chat", "Acompañamiento por chat", "Seguimiento y resolución de dudas entre sesiones."],
     ],
   });
-
-  // Práctico / supuestos
-  if (precios.practico) {
-    priceCard(body, {
-      tag: "Ejercicio práctico", tagColor: NAVY, titulo: "Preparación del ejercicio práctico",
-      sub: "Metodología, tipología de supuestos y recursos",
-      precioBruto: precios.practico.full, precioOferta: precios.practico.desc, ofertaNota: "si ya preparas la teoría (−20%) · sin pago fraccionado",
-      intro: "Preparamos el ejercicio práctico con metodología, ejemplos reales y recursos de apoyo.",
-      features: [
-        ["target", "Tipología de supuestos", "Ejemplos y tipos de supuestos prácticos relacionados con las funciones del puesto."],
-        ["info", "Construcción de hipótesis", "Cómo plantear y anticipar posibles supuestos del tribunal."],
-        ["check", "Metodología de resolución", "Sistemática de planteamiento, desarrollo y conclusiones."],
-        ["tool", "Recursos en vídeo", "Clases grabadas y documentos de referencia para justificar el desarrollo."],
-        ["stack", BANCO_SUPUESTOS, "Acceso al " + BANCO_SUPUESTOS + " en la plataforma, para entrenar con casos a medida."],
-      ],
-    });
-    body.push(p([txt("El bloque práctico arranca tras superar el ejercicio anterior. No admite pago fraccionado.", { color: GREY, size: 18, italics: true })], { after: 0 }));
-  } else if (precios.supuestos) {
-    priceCard(body, {
-      tag: "Supuestos prácticos", tagColor: NAVY, titulo: "Supuestos prácticos",
-      sub: "Propuesta y corrección personalizada por hora",
-      precioBruto: null, precioOferta: precios.supuestos.hora, ofertaNota: "por hora",
-      intro: "Un preparador te propone un supuesto práctico a medida y corrige tu resolución.",
-      features: [
-        ["check", "Corrección personalizada", "Vía aula virtual, con feedback individualizado."],
-        ["stack", BANCO_SUPUESTOS, "Acceso al " + BANCO_SUPUESTOS + " en la plataforma."],
-      ],
-    });
-  }
 }
 
 // -------- Proceso selectivo (fases con chips) --------
@@ -339,15 +367,122 @@ function portadaDecision(body, planData) {
     rows: dRows,
   }));
   body.push(spacer(140));
+
+  // Lema (banda azul marino con texto blanco centrado)
+  body.push(new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: cols([100]), borders: noBorder,
+    rows: [new TableRow({ children: [cell([
+      p([txt(LEMA, { bold: true, color: WHITE, size: 21 })], { after: 0, align: A.CENTER, line: 300 }),
+    ], { width: 100, fill: NAVY, margins: { top: 180, bottom: 180, left: 260, right: 260 } })] })]
+  }));
+  body.push(spacer(120));
+
+  // Claims fijos (+900 · 73 % · 1 a 1)
+  body.push(new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: cols([33, 33, 34]),
+    borders: { ...noBorder, insideVertical: { style: BorderStyle.SINGLE, color: WHITE, size: 16 } },
+    rows: [new TableRow({ children: STATS.map(([big, small]) => cell([
+      p([txt(big, { bold: true, color: CYAN, size: 40 })], { after: 6, align: A.CENTER, line: 460 }),
+      p([txt(small, { color: GREY, size: 16 })], { after: 0, align: A.CENTER, line: 220 }),
+    ], { width: 33, fill: SOFT, margins: { top: 150, bottom: 150, left: 120, right: 120 } })) })]
+  }));
+  body.push(spacer(60));
+  body.push(p([txt(NOTA_STATS, { color: GREY, size: 15, italics: true })], { after: 60, align: A.CENTER, line: 220 }));
+
   if (conv.boletin) body.push(p([txt(conv.boletin, { color: GREY, size: 18, italics: true })], { after: 0, line: 264 }));
 }
 
-// ===================== MODO DECISIÓN =====================
+// -------- "Por qué prepararte con nosotros" (4 features, tras la portada) --------
+function seccionPorque(body) {
+  body.push(new Paragraph({ children: [new PageBreak()] }));
+  body.push(sectionHead("target", "Por qué prepararte con nosotros"));
+  body.push(spacer(80));
+  body.push(p([txt("No es solo un temario: es un método y un preparador que te acompaña hasta el examen.", { color: INK, size: 20 })], { after: 140, line: 264 }));
+  [
+    ["user", "Preparador funcionario en activo", "Funcionario de carrera en activo, con más de 15 años preparando opositores, que te guía en cada fase del proceso: de la solicitud al examen."],
+    ["doc", "Temario a medida y único para tu proceso", "No es un temario genérico ni reutilizado: se elabora a medida para esta convocatoria concreta, con su normativa y sus particularidades."],
+    ["test", "Simulacros con exámenes reales", "Baterías de preguntas por tema y simulacros específicos de este proceso, además de exámenes reales de convocatorias anteriores."],
+    ["calendar", "Acompañamiento hasta el examen", "Te guiamos de la solicitud al examen: planificación del estudio, seguimiento y avisos de cada plazo del proceso."],
+  ].forEach((c) => body.push(featureRow(c[0], c[1], c[2])));
+}
+
+// -------- "Descuentos y cómo se combinan" --------
+function seccionDescuentos(body, precios) {
+  body.push(spacer(120));
+  subHead(body, "Descuentos y cómo se combinan");
+  body.push(featureRow("euro", "Pago único −10 %", "La preparación completa tiene un 10 % de descuento por pago único (ya reflejado en el precio)."));
+  body.push(featureRow("euro", "Temas sueltos acumulables", "Lo que pagues por temas sueltos se descuenta del precio de la preparación completa si luego la contratas."));
+  if (precios.practico) body.push(featureRow("euro", "Práctico −20 %", "El ejercicio práctico cuesta " + fmt(precios.practico.desc) + " si preparas la teoría con nosotros; " + fmt(precios.practico.full) + " por separado."));
+}
+
+// -------- "Resumen de precios" (tabla) --------
+// Siempre empieza en una página nueva (PageBreak) y sus filas no se parten
+// (cantSplit) para que la tabla no aparezca cortada entre páginas.
+function tablaResumen(body, planData, precios) {
+  body.push(new Paragraph({ children: [new PageBreak()] }));
+  subHead(body, "Resumen de precios");
+  const f = planData.flags || {};
+  const teoParts = [f.test ? "test" : null, f.desarrollo ? "desarrollo" : null].filter(Boolean).join(" + ");
+  const tituloCompleta = "Preparación completa" + (teoParts ? " (" + teoParts + ")" : "");
+  const filas = [];
+  // [nombre, referencia (o null), loQuePagas, subnota (o null), destacada]
+  if (precios.teorico) filas.push([tituloCompleta, precios.teorico.brutoFmt, precios.teorico.ofertaFmt, "con pago único · ahorras " + fmt(precios.teorico.bruto - precios.teorico.oferta), true]);
+  if (precios.temasSueltos) filas.push(["Temas sueltos a medida (para probar)", null, precios.temasSueltos.precioTema + " € / tema", null, false]);
+  if (precios.practico) filas.push(["Ejercicio práctico (supuestos)", precios.practico.fullFmt, precios.practico.descFmt, "si preparas la teoría · ahorras " + fmt(precios.practico.full - precios.practico.desc), false]);
+  else if (precios.supuestos) filas.push(["Supuestos prácticos", null, precios.supuestos.hora + " € / hora", null, false]);
+  if (precios.meritos) filas.push(["Preparación de méritos", null, precios.meritos.etiqueta, null, false]);
+  filas.push(["Tutoría individual (60 min)", null, precios.tutoria.hora + " € / hora", null, false]);
+  filas.push(["Pack Intensivo (5 tutorías de 30 min)", null, precios.packIntensivo.precio + " €", null, false]);
+
+  const th = (t, align) => new Paragraph({ spacing: { after: 0, line: 220 }, alignment: align, children: [txt(t, { bold: true, color: WHITE, size: 15, caps: true })] });
+  const rows = [new TableRow({ cantSplit: true, children: [
+    cell([th("Servicio", A.LEFT)], { w: dxa(50), fill: NAVY, margins: { top: 90, bottom: 90, left: 140, right: 100 } }),
+    cell([th("Precio de referencia", A.RIGHT)], { w: dxa(24), fill: NAVY, margins: { top: 90, bottom: 90, left: 60, right: 100 } }),
+    cell([th("Lo que pagas", A.RIGHT)], { w: dxa(26), fill: NAVY, margins: { top: 90, bottom: 90, left: 60, right: 140 } }),
+  ] })];
+  const cb = { top: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.SINGLE, size: 4, color: LINE } };
+  filas.forEach(([nombre, ref, paga, sub, dest]) => {
+    rows.push(new TableRow({ cantSplit: true, children: [
+      cell([p([...(dest ? [txt("★ ", { color: CYAN, size: 18, bold: true })] : []), txt(nombre, { bold: dest, color: dest ? NAVY : INK, size: 18 })], { after: 0, line: 240 })], { w: dxa(50), borders: cb, margins: { top: 100, bottom: 100, left: 140, right: 100 } }),
+      cell([p([ref ? txt(ref, { color: GREY, size: 17, strike: true }) : txt("—", { color: LINE, size: 17 })], { after: 0, align: A.RIGHT, line: 240 })], { w: dxa(24), borders: cb, valign: VerticalAlign.CENTER, margins: { top: 100, bottom: 100, left: 60, right: 100 } }),
+      cell([p([txt(paga, { bold: true, color: NAVY, size: 18 })], { after: sub ? 2 : 0, align: A.RIGHT, line: 240 }), ...(sub ? [p([txt(sub, { color: GREY, size: 15 })], { after: 0, align: A.RIGHT, line: 210 })] : [])], { w: dxa(26), borders: cb, valign: VerticalAlign.CENTER, margins: { top: 100, bottom: 100, left: 60, right: 140 } }),
+    ] }));
+  });
+  body.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: cols([50, 24, 26]), borders: noBorder, rows }));
+  body.push(spacer(80));
+  body.push(p([txt("Los descuentos por pago único (−10 %) y del ejercicio práctico (−20 %) ya están aplicados en la columna “Lo que pagas”.", { color: GREY, size: 16, italics: true })], { after: 0, line: 240 }));
+}
+
+// -------- CTA "Empieza hoy" (banda azul marino) --------
+function ctaEmpieza(body) {
+  body.push(spacer(180));
+  body.push(new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: cols([100]), borders: noBorder,
+    rows: [new TableRow({ children: [cell([
+      p([txt("Empieza hoy", { bold: true, color: WHITE, size: 26 })], { after: 8, align: A.CENTER, line: 300 }),
+      p([txt("Contrata tu preparación o escríbenos para resolver cualquier duda antes de decidir.", { color: "D7ECF5", size: 18 })], { after: 20, align: A.CENTER, line: 260 }),
+      new Paragraph({ alignment: A.CENTER, spacing: { after: 0, line: 300 }, children: [img("wa_business.png", 24, 24), txt("  WhatsApp Business  ", { bold: true, color: WHITE, size: 20 }), txt(URLS.telefono, { bold: true, color: "8FE3FF", size: 24 })] }),
+    ], { width: 100, fill: NAVY, margins: { top: 200, bottom: 200, left: 200, right: 200 } })] })]
+  }));
+}
+
+// ===================== PLAN (único modo) =====================
 function buildDecision(planData, precios) {
   const conv = planData.conv, t = planData.temario || {};
   const body = [];
+  // Etiquetas de los bloques del temario según el boletín (p. ej. "Materias
+  // comunes/específicas" o "Temario general/específico"). Respaldo genérico.
+  const lblGen = t.etiquetaGeneral || "Temario general";
+  const lblEsp = t.etiquetaEspecifico || "Temario específico";
 
   portadaDecision(body, planData);
+
+  // Por qué prepararte con nosotros
+  seccionPorque(body);
+
+  // Proceso selectivo (antes que el temario, como en el diseño definitivo)
+  seccionProceso(body, planData, "¿En qué consiste el proceso selectivo?",
+    "Estas son las fases del proceso. Solo los ejercicios de temario y, en su caso, el práctico se preparan con material; el resto forma parte del proceso pero queda fuera de la preparación.");
 
   // El temario (solo si hay)
   if (t.tieneTemario) {
@@ -356,22 +491,18 @@ function buildDecision(planData, precios) {
     body.push(spacer(80));
     const ng = t.temasGeneral?.length || 0, ne = t.temasEspecifico?.length || 0;
     if (ng && ne) {
-      // Total coherente con la suma de los dos bloques (el modelo a veces pone
-      // un ntemas que no cuadra con los enunciados listados).
       const total = ng + ne;
       body.push(p([txt("El temario consta de ", { color: INK, size: 20 }), txt(total + " temas", { bold: true, color: NAVY, size: 20 }),
-        txt(": un temario general (" + ng + " temas) y un temario específico (" + ne + " temas).", { color: INK, size: 20 })], { after: 140, line: 264 }));
+        txt(": " + lblGen.toLowerCase() + " (" + ng + " temas) y " + lblEsp.toLowerCase() + " (" + ne + " temas).", { color: INK, size: 20 })], { after: 140, line: 264 }));
       body.push(new Table({
         width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: cols([49, 2, 49]), borders: noBorder,
         rows: [new TableRow({ children: [
-          cell([p([txt("Temario general · " + ng + " temas", { bold: true, color: CYAN, size: 17, caps: true })], { after: 40, line: 230 }), p([txt(resumenBloque(conv.resumenGeneral, t.temasGeneral, "general"), { color: GREY, size: 18 })], { after: 0, line: 240 })], { width: 49, fill: SOFT, margins: { top: 120, bottom: 120, left: 140, right: 120 } }),
+          cell([p([txt(lblGen + " · " + ng + " temas", { bold: true, color: CYAN, size: 17, caps: true })], { after: 40, line: 230 }), p([txt(resumenBloque(conv.resumenGeneral, t.temasGeneral, "general"), { color: GREY, size: 18 })], { after: 0, line: 240 })], { width: 49, fill: SOFT, margins: { top: 120, bottom: 120, left: 140, right: 120 } }),
           cell([p([], { after: 0 })], { width: 2, margins: { top: 0, bottom: 0, left: 0, right: 0 } }),
-          cell([p([txt("Temario específico · " + ne + " temas", { bold: true, color: CYAN, size: 17, caps: true })], { after: 40, line: 230 }), p([txt(resumenBloque(conv.resumenEspecifico, t.temasEspecifico, "especifico"), { color: GREY, size: 18 })], { after: 0, line: 240 })], { width: 49, fill: SOFT, margins: { top: 120, bottom: 120, left: 140, right: 120 } }),
+          cell([p([txt(lblEsp + " · " + ne + " temas", { bold: true, color: CYAN, size: 17, caps: true })], { after: 40, line: 230 }), p([txt(resumenBloque(conv.resumenEspecifico, t.temasEspecifico, "especifico"), { color: GREY, size: 18 })], { after: 0, line: 240 })], { width: 49, fill: SOFT, margins: { top: 120, bottom: 120, left: 140, right: 120 } }),
         ]})]
       }));
     } else {
-      // Sin distinción común/específico: un único bloque, pero también con su
-      // cuadro azul de resumen (debe verse siempre que haya temario).
       const temas = (ne ? t.temasEspecifico : t.temasGeneral) || [];
       const totalUnico = temas.length || t.ntemas || 0;
       body.push(p([txt("El temario consta de ", { color: INK, size: 20 }), txt(totalUnico + " temas", { bold: true, color: NAVY, size: 20 }), txt(".", { color: INK, size: 20 })], { after: 140, line: 264 }));
@@ -389,33 +520,33 @@ function buildDecision(planData, precios) {
     body.push(p([txt("El detalle completo de los enunciados está en el anexo final.", { color: GREY, size: 18, italics: true })], { after: 0 }));
   }
 
-  // Proceso
-  seccionProceso(body, planData, "¿En qué consiste el proceso selectivo?",
-    "Estas son las fases del proceso. Solo los ejercicios de temario y, en su caso, el práctico se preparan con material; el resto forma parte del proceso pero queda fuera de la preparación.");
-
   // Cómo prepararte
   body.push(new Paragraph({ children: [new PageBreak()] }));
   body.push(sectionHead("stack", "Cómo prepararte con nosotros"));
   body.push(spacer(80));
-  body.push(p([txt("La preparación se organiza en servicios que puedes combinar según tus necesidades.", { color: INK, size: 20 })], { after: 60, line: 264 }));
+  body.push(p([txt("La preparación se organiza en servicios que puedes combinar: la parte teórica (temario para test y desarrollo), el ejercicio práctico y las tutorías individuales.", { color: INK, size: 20 })], { after: 60, line: 264 }));
   if (conv.cooficial) {
     body.push(p([txt("El temario puedes elegirlo en castellano o en " + conv.lenguaCooficial + ", en un solo idioma (no en ambos a la vez). ", { bold: true, color: NAVY, size: 19 }),
       txt("Todas las clases y tutorías con el preparador se imparten en español.", { color: INK, size: 19 })], { after: 160, line: 260 }));
   }
   tarjetasOpciones(body, planData, precios);
 
-  // Cotaly
-  cotalySection(body, { incluida: true });
+  // Descuentos + Resumen de precios + CTA
+  seccionDescuentos(body, precios);
+  tablaResumen(body, planData, precios);
+  ctaEmpieza(body);
 
-  // Condiciones
+  // Condiciones de contratación
   body.push(new Paragraph({ children: [new PageBreak()] }));
   body.push(sectionHead("scale", "Condiciones de contratación"));
   body.push(spacer(80));
   [
     ["Seguimiento de convocatorias", "El seguimiento de las publicaciones oficiales es responsabilidad de la persona opositora; el centro puede facilitar el enlace cuando la administración lo tenga."],
-    ["Activación", "El aula virtual y los temas se activan tras formalizar la contratación. La herramienta de seguimiento es gratuita 3 meses desde la activación."],
-    ["Temario a medida y único", "No es un temario genérico ni reutilizado: cada convocatoria tiene su programa y su normativa. Entrega en torno a un mes desde la contratación."],
-    ["Primer acceso al aula", "Al formalizar aceptas las Condiciones Generales, el inicio inmediato del servicio (con pérdida del derecho de desistimiento), las Normas de uso y compromiso del alumno y la Política de Privacidad."],
+    ["Activación", "El aula virtual y los temas se activan tras formalizar la contratación."],
+    ["Temario a medida, único para tu proceso", "No es un temario genérico ni reutilizado: cada convocatoria tiene su programa y su normativa."],
+    ["Plazo de entrega", "El temario completo se entrega en torno a un mes desde la contratación, al ser material a medida. Consultas individualizadas por chat durante toda la preparación."],
+    ["Primer acceso al aula", "Al acceder por primera vez aceptas las Condiciones Generales, el inicio inmediato del servicio (con la consiguiente pérdida del derecho de desistimiento), las Normas de uso y compromiso del alumno y la Política de Privacidad."],
+    ["Pago y formalización", "El precio de la parte teórica ya incluye el 10% por pago único. El servicio queda sujeto a la aceptación de los términos y condiciones."],
   ].forEach((c) => body.push(featureRow("info", c[0], c[1])));
   body.push(tycLink({ before: 100 }));
 
@@ -425,69 +556,13 @@ function buildDecision(planData, precios) {
     body.push(new Paragraph({ children: [new PageBreak()] }));
     body.push(sectionHead("doc", "Anexo · Relación de temas"));
     body.push(spacer(80));
-    // Solo se distingue "general/específico" si el boletín trae AMBOS bloques.
-    // Si solo hay uno, se etiqueta simplemente "Temario".
     const ambos = ng && ne;
-    if (ng) temaList(body, (ambos ? "Temario general · " : "Temario · ") + ng + " temas", planData.temario.temasGeneral);
+    if (ng) temaList(body, (ambos ? lblGen + " · " : "Temario · ") + ng + " temas", planData.temario.temasGeneral);
     if (ambos) body.push(spacer(80));
-    if (ne) temaList(body, (ambos ? "Temario específico · " : "Temario · ") + ne + " temas", planData.temario.temasEspecifico);
+    if (ne) temaList(body, (ambos ? lblEsp + " · " : "Temario · ") + ne + " temas", planData.temario.temasEspecifico);
   }
 
   // Canales
-  bloqueCanales(body);
-  return body;
-}
-
-// ===================== MODO CAPTACIÓN (AIDA) =====================
-function buildCaptacion(planData, precios) {
-  const conv = planData.conv;
-  const body = [];
-
-  // Portada con gancho
-  body.push(spacer(80));
-  body.push(p([txt("¿QUIERES TU PLAZA DE", { bold: true, color: CYAN, size: 22, caps: true })], { after: 20 }));
-  body.push(p([txt(conv.plaza + "?", { bold: true, color: NAVY, size: 46 })], { after: 40, line: 620, lineRule: LineRuleType.AT_LEAST }));
-  body.push(p([txt(conv.admin, { color: GREY, size: 22 })], { after: 200 }));
-  // 3 claims
-  const claims = [["2017", "Preparando opositores del deporte desde 2017"], ["73%", "de aprobados en nuestros procesos"], ["1 a 1", "Preparador funcionario en activo, +15 años"]];
-  body.push(new Table({
-    width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: cols([33, 33, 34]), borders: noBorder,
-    rows: [new TableRow({ children: claims.map(([big, small]) => cell([
-      p([txt(big, { bold: true, color: CYAN, size: 44 })], { after: 6, align: A.CENTER, line: 480 }),
-      p([txt(small, { color: GREY, size: 17 })], { after: 0, align: A.CENTER, line: 230 }),
-    ], { width: 33, fill: SOFT, margins: { top: 160, bottom: 160, left: 120, right: 120 } })) })]
-  }));
-  body.push(spacer(140));
-  if (conv.boletin) body.push(p([txt(conv.boletin, { color: GREY, size: 18, italics: true })], { after: 0, line: 264 }));
-
-  // Proceso
-  seccionProceso(body, planData, "El proceso selectivo, paso a paso", "Conoce bien a qué te enfrentas. Estas son las fases del proceso.");
-
-  // Así te preparamos (valor, antes del precio)
-  body.push(new Paragraph({ children: [new PageBreak()] }));
-  body.push(sectionHead("stack", "Así te preparamos"));
-  body.push(spacer(80));
-  if (conv.cooficial) {
-    body.push(p([txt("El temario puedes elegirlo en castellano o en " + conv.lenguaCooficial + " (un solo idioma). ", { bold: true, color: NAVY, size: 19 }),
-      txt("Todas las clases y tutorías con el preparador se imparten en español.", { color: INK, size: 19 })], { after: 140, line: 260 }));
-  }
-  tarjetasOpciones(body, planData, precios);
-
-  // Cotaly
-  cotalySection(body, { incluida: true });
-
-  // Por qué nosotros (prueba social)
-  body.push(new Paragraph({ children: [new PageBreak()] }));
-  body.push(sectionHead("check", "Por qué preparar tu plaza con nosotros"));
-  body.push(spacer(80));
-  [
-    ["Resultados reales", "73% de aprobados y casos de éxito en procesos como el Ayto. de Madrid (CAFD) o la Junta de Andalucía."],
-    ["Especialistas en deporte", "Desde 2017 preparamos exclusivamente oposiciones del sector deportivo."],
-    ["Preparador funcionario en activo", "Con más de 15 años de experiencia preparando opositores, uno a uno."],
-    ["Todo en una plataforma", "Con Cotaly tienes tu plan, tu temario, tus simulacros y a tu preparador en un solo sitio."],
-  ].forEach((c) => body.push(featureRow("target", c[0], c[1])));
-
-  // CTA + canales
   bloqueCanales(body);
   return body;
 }
@@ -499,8 +574,7 @@ function buildCaptacion(planData, precios) {
  * @param {string} assetsDir carpeta con _common.js, byd_logo.png, icons/, QR...
  */
 async function renderPlan(planData, precios, assetsDir) {
-  const modo = planData._meta?.modo || "decision";
-  const body = modo === "captacion" ? buildCaptacion(planData, precios) : buildDecision(planData, precios);
+  const body = buildDecision(planData, precios);
 
   const doc = new Document({
     creator: "oposicionesdeporte.com",

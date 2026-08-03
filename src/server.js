@@ -143,12 +143,6 @@ app.post("/api/login", (req, res) => {
 });
 app.post("/api/logout", (req, res) => req.session.destroy(() => res.json({ ok: true })));
 
-// Healthcheck publico para OpenShift. Debe ir antes de requireAuth para que
-// readiness/liveness no fallen con 401 cuando no hay sesion.
-app.get("/api/health", (req, res) => {
-  res.json({ ok: true, service: "creaplanesopo" });
-});
-
 // Estáticos públicos (login + favicon) y protegidos (app)
 app.use("/login.html", express.static(path.join(__dirname, "..", "public", "login.html")));
 app.use("/favicon.svg", express.static(path.join(__dirname, "..", "public", "favicon.svg")));
@@ -182,7 +176,7 @@ app.post("/api/generar", (req, res, next) => {
     }
     const boletinTxt = partes.join("\n\n");
     const observaciones = (req.body.observaciones || "").trim();
-    const modo = req.body.modo === "captacion" ? "captacion" : "decision";
+    const modo = "decision"; // modo único (se eliminó el modo Captación)
 
     if (!boletinTxt || boletinTxt.length < 200) {
       return res.status(400).json({ error: "El texto del boletín es demasiado corto o falta." });

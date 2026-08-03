@@ -136,6 +136,21 @@ docker compose logs -f app
 - Mantén `NODE_ENV=production` en el `.env` y entra siempre por HTTPS.
 - **No borres la carpeta `outputs/`**: contiene el histórico y los planes generados.
 
+## Modelo de IA y coste
+
+La app clasifica cada boletín con un modelo de IA (una llamada por plan). Por
+defecto usa **Haiku 4.5**, el más barato (~3 céntimos por plan).
+
+- **Más calidad de clasificación** (a ~3× el coste): añade en el `.env`
+  `ANTHROPIC_MODEL=claude-sonnet-4-6` y recarga con `docker compose up -d`
+  (no hace falta rebuild).
+- **Volver al más barato**: quita esa línea (o pon `claude-haiku-4-5`) y recarga.
+
+Tras el despliegue, **genera 2–3 planes de prueba** (incluido alguno con temario
+común/específico y con ejercicio práctico) y comprueba que clasifica bien: caso,
+tipo de ejercicios, separación del temario y sus etiquetas, y fases. Si algún
+plan sale mal clasificado con Haiku, cambia a Sonnet como se indica arriba.
+
 ## Operaciones habituales
 
 ```bash

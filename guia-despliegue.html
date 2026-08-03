@@ -247,6 +247,18 @@
   <hr class="div" />
 
   <section>
+    <h2>Modelo de IA y coste</h2>
+    <p class="section-lead">La app clasifica cada boletín con un modelo de IA (una llamada por plan). Por defecto usa <strong>Haiku 4.5</strong>, el más barato (~3 céntimos por plan).</p>
+    <ul>
+      <li><strong>Más calidad de clasificación</strong> (a ~3× el coste): añade en el <code>.env</code> la línea <code>ANTHROPIC_MODEL=claude-sonnet-4-6</code> y recarga con <code>docker compose up -d</code> (no hace falta rebuild).</li>
+      <li><strong>Volver al más barato:</strong> quita esa línea (o pon <code>claude-haiku-4-5</code>) y recarga.</li>
+    </ul>
+    <p>Tras el despliegue, <strong>genera 2–3 planes de prueba</strong> (incluido alguno con temario común/específico y con ejercicio práctico) y comprueba que clasifica bien: caso, tipo de ejercicios, separación del temario y sus etiquetas, y fases. Si algún plan sale mal clasificado con Haiku, cambia a Sonnet como se indica arriba.</p>
+  </section>
+
+  <hr class="div" />
+
+  <section>
     <h2>Operaciones habituales</h2>
     <p class="section-lead">Tareas del día a día una vez desplegado.</p>
     <div class="cmd"><pre><code><span class="comment"># Ver logs de la app</span>

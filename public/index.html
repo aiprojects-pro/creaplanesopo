@@ -54,12 +54,6 @@
   <label>Observaciones del proceso (particularidades a tener en cuenta)</label>
   <textarea id="obs" style="min-height:100px" placeholder="Ej.: el práctico incluye lectura pública; la entrevista es eliminatoria; hay bolsa de 2 años; etc."></textarea>
 
-  <label>Modo del plan</label>
-  <div class="modo">
-    <button type="button" class="active" data-modo="decision" onclick="setModo(this)">Decisión (ya conoce el centro)</button>
-    <button type="button" data-modo="captacion" onclick="setModo(this)">Captación (marketing AIDA)</button>
-  </div>
-
   <div class="cta">
     <button id="go" onclick="generar()">Generar plan</button>
   </div>
@@ -70,8 +64,6 @@
 </main>
 
 <script>
-let modo = "decision";
-function setModo(btn){ modo = btn.dataset.modo; document.querySelectorAll(".modo button").forEach(b=>b.classList.remove("active")); btn.classList.add("active"); }
 async function logout(){ await fetch("/api/logout",{method:"POST"}); location.href="/login.html"; }
 
 async function generar(){
@@ -91,7 +83,7 @@ async function generar(){
     if (boletin) fd.append("boletinTxt", boletin);
     for (const f of files) fd.append("boletinFiles", f);
     fd.append("observaciones", obs);
-    fd.append("modo", modo);
+    fd.append("modo", "decision");
     const r = await fetch("/api/generar", { method:"POST", body: fd });
     let data;
     try { data = await r.json(); }

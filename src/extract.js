@@ -10,6 +10,12 @@ const path = require("path");
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+// Modelo configurable por entorno para ajustar coste/calidad SIN tocar código.
+// Por defecto Haiku 4.5 (el más barato, ~3× menos que Sonnet). Si en algún
+// momento notas peor clasificación, sube la calidad poniendo en el .env:
+//   ANTHROPIC_MODEL=claude-sonnet-4-6   (o claude-sonnet-5)
+const MODEL = process.env.ANTHROPIC_MODEL || "claude-haiku-4-5";
+
 // Cargamos las reglas de negocio desde el propio SKILL.md (fuente única de
 // verdad). Así, si Rosario actualiza las reglas, basta con actualizar este
 // fichero — no hay que tocar el prompt a mano.
@@ -35,7 +41,7 @@ INSTRUCCIONES DE SALIDA:
 - En los temarios, copia el enunciado de cada tema SIN su número inicial (quita "1.", "Tema 1.", "1)"…): el sistema los numera automáticamente.
 - PRÁCTICO vs SUPUESTOS: si el proceso tiene CUALQUIER ejercicio práctico (prueba práctica, supuesto práctico, caso práctico, prueba teórico-práctica), marca flags.practico=true (NUNCA flags.supuestos). flags.supuestos es solo el servicio de supuestos sueltos por horas, que no aparece en el boletín: déjalo en false salvo indicación expresa del operador.
 - IDIOMA DEL PLAN: redacta el contenido descriptivo que extraes (enunciados de temas, nombres y descripciones de fases, resúmenes) en el idioma que el operador indique en OBSERVACIONES; si no indica ninguno, en ESPAÑOL (traduce si el boletín está en otra lengua, p. ej. catalán/gallego/valenciano/euskera). Mantén SIN traducir cifras, fechas, referencias oficiales (BOE/BOP/DOGC…) y nombres propios. Rellena conv.idioma con ese idioma ("Español" por defecto).
-- TEMARIO: refleja la estructura del boletín. Si distingue temario general/común y específico, reparte en temasGeneral y temasEspecifico. Si NO lo distingue, pon TODOS los temas en un único array y deja el otro vacío (el sistema lo etiquetará simplemente como "Temario").
+- TEMARIO: refleja la estructura del boletín. Si distingue dos bloques, reparte en temasGeneral y temasEspecifico y rellena etiquetaGeneral y etiquetaEspecifico con el nombre EXACTO que usa el boletín para cada bloque ("Materias comunes"/"Materias específicas", "Temario general"/"Temario específico", "Bloque I"/"Bloque II"…). Si NO distingue bloques, pon TODOS los temas en un único array, deja el otro vacío y las etiquetas a null (el sistema lo llamará "Temario").
 - ntemas es el TOTAL de temas y debe COINCIDIR con la suma de los temas generales + específicos (no pongas solo el de un bloque).
 - resumenGeneral y resumenEspecifico son un resumen temático breve de las MATERIAS de cada bloque (p. ej. "Constitución, régimen local, contratación, PRL…"), NO la descripción del proceso selectivo. Rellena ambos cuando existan los dos bloques.
 
@@ -67,6 +73,8 @@ Esquema JSON EXACTO que debes devolver:
   "temario": {
     "tieneTemario": boolean,
     "ntemas": number | null,       // total de temas (0/null si no hay temario)
+    "etiquetaGeneral": string | null,    // nombre del bloque general/común TAL COMO lo llama el boletín: "Materias comunes", "Temario general", "Bloque I", etc. null si no hay dos bloques.
+    "etiquetaEspecifico": string | null, // nombre del bloque específico TAL COMO lo llama el boletín: "Materias específicas", "Temario específico", "Bloque II", etc. null si no hay dos bloques.
     "temasGeneral": string[],      // enunciados SIN numeración inicial ("1.", "Tema 1.", "1)"...): el sistema numera. [] si no se publican
     "temasEspecifico": string[],   // igual: enunciados SIN numeración inicial. [] si no se publican
     "desglosePorGrupos": [ { "grupo": string, "ntemas": number, "descripcion": string } ] | null
@@ -100,9 +108,11 @@ async function extractPlanData(boletinTxt, observaciones = "", modo = "decision"
     `Clasifica esta convocatoria y devuelve el JSON según el esquema.`;
 
   const resp = await client.messages.create({
-    model: "claude-sonnet-4-6",
+    model: MODEL,
     max_tokens: 8000,
-    system: SYSTEM_PROMPT,
+    // El prompt de sistema es fijo en cada llamada: lo cacheamos para que las
+    // generaciones seguidas (misma sesión) paguen ese trozo a ~0,1× la entrada.
+    system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
     messages: [{ role: "user", content: userContent }],
   });
 
@@ -127,7 +137,7 @@ async function extractPlanData(boletinTxt, observaciones = "", modo = "decision"
     throw err;
   }
 
-  planData._meta = { modo, generadoEn: new Date().toISOString(), modelo: "claude-sonnet-4-6" };
+  planData._meta = { modo, generadoEn: new Date().toISOString(), modelo: MODEL };
   return planData;
 }
 
